@@ -6,13 +6,17 @@ DocuMind AI is a full-stack Retrieval-Augmented Generation app that allows users
 
 * Upload PDF documents
 * Extract text from PDF files
-* Split documents into smaller text chunks
+* Split documents into smaller searchable chunks
 * Generate vector embeddings using OpenAI
 * Store document embeddings in ChromaDB
 * Perform semantic search over uploaded document content
-* Generate AI-powered answers using retrieved context
-* Display source citations with page number and preview text
-* React frontend for document upload and question answering
+* Generate AI-powered answers using retrieved document context
+* Display clean source citations with filename, page number, and preview text
+* Show the active uploaded document with filename, page count, and chunk count
+* Maintain chat history for multi-question conversations
+* Clear the current document and reset the active ChromaDB collection
+* Prevent users from asking questions before uploading a document
+* React frontend for document upload, question answering, chat history, and citations
 * FastAPI backend with interactive API documentation
 
 ## Tech Stack
@@ -58,6 +62,44 @@ Semantic search retrieves relevant chunks
 LLM generates an answer from retrieved context
         ↓
 Answer is returned with source citations
+        ↓
+Conversation is displayed in chat history
+```
+
+## Architecture
+
+```text
+React Frontend
+    │
+    ├── Upload PDF
+    ├── Display current document
+    ├── Ask questions
+    ├── Show chat history
+    └── Display citations
+            ↓
+FastAPI Backend
+    │
+    ├── PDF upload endpoint
+    ├── Document clearing endpoint
+    └── Question answering endpoint
+            ↓
+Document Processing
+    │
+    ├── PDF text extraction
+    ├── Text chunking
+    └── Metadata assignment
+            ↓
+Vector Search
+    │
+    ├── OpenAI embeddings
+    ├── ChromaDB vector storage
+    └── Semantic retrieval
+            ↓
+LLM Response
+    │
+    ├── Retrieved context
+    ├── OpenAI chat model
+    └── Source-cited answer
 ```
 
 ## Project Structure
@@ -77,8 +119,6 @@ RagDocumentAssistantProject/
 │   │       ├── vector_service.py
 │   │       └── rag_service.py
 │   │
-│   ├── uploads/
-│   ├── chroma_db/
 │   ├── requirements.txt
 │   └── .env
 │
@@ -94,6 +134,8 @@ RagDocumentAssistantProject/
 ├── .gitignore
 └── README.md
 ```
+
+> Note: `uploads/`, `chroma_db/`, `.env`, `venv/`, and `node_modules/` are intentionally excluded from GitHub.
 
 ## Backend Setup
 
@@ -183,6 +225,8 @@ POST /documents/upload
 
 Uploads a PDF, extracts text, creates chunks, generates embeddings, and stores them in ChromaDB.
 
+When a new PDF is uploaded, the previous ChromaDB collection is cleared so the assistant answers from the most recently uploaded document only.
+
 Example response:
 
 ```json
@@ -217,13 +261,35 @@ Example response:
   "answer": "The document explains...",
   "sources": [
     {
-      "source": "./uploads/example.pdf",
+      "source": "example.pdf",
       "page": 1,
       "preview": "This section discusses..."
     }
   ]
 }
 ```
+
+### Clear Current Document
+
+```http
+DELETE /documents/clear
+```
+
+Clears the active ChromaDB collection and resets the current document context.
+
+Example response:
+
+```json
+{
+  "message": "Current document cleared successfully"
+}
+```
+
+## Current Behavior
+
+This version uses one active document at a time. When a new PDF is uploaded, the previous ChromaDB collection is cleared and replaced with the newly uploaded document. This keeps answers focused on the most recent document and prevents old sources from mixing into new responses.
+
+The frontend also displays the current document name, page count, chunk count, chat history, and source citations. If no document is active, users are prompted to upload a PDF before asking a question.
 
 ## Environment Variables
 
@@ -253,23 +319,29 @@ frontend/node_modules/
 
 These are excluded in `.gitignore`.
 
-## Current Behavior
+## Problems Solved
 
-This version is designed to use one active document at a time. When a new PDF is uploaded, the previous ChromaDB collection is cleared and replaced with the newly uploaded document. This keeps answers focused on the most recent document and prevents old sources from mixing into new responses.
+DocuMind AI solves the problem of manually searching through long PDF documents by allowing users to ask natural language questions and receive document-grounded answers. Instead of relying on keyword search or general chatbot knowledge, the app uses semantic retrieval to find relevant document sections and generate answers from the uploaded content.
+
+The project also improves transparency by returning source citations, helping users verify where the answer came from.
 
 ## Future Improvements
 
 * Support multiple uploaded PDFs
 * Add document selection
-* Add document deletion
-* Add chat history
+* Add document deletion for individual files
+* Add support for DOCX and TXT files
 * Add authentication
 * Add streaming AI responses
-* Add support for DOCX and TXT files
-* Improve citation formatting
+* Add Pinecone or another managed vector database
 * Deploy backend to Render
 * Deploy frontend to Vercel
 * Add user-specific document collections
+* Add downloadable chat history
+
+## Resume Summary
+
+Built a full-stack Retrieval-Augmented Generation document assistant that enables users to upload PDFs and ask natural language questions about their contents. The system extracts document text, creates vector embeddings, stores them in ChromaDB, retrieves relevant context through semantic search, and generates source-cited answers using OpenAI and LangChain.
 
 ## Author
 

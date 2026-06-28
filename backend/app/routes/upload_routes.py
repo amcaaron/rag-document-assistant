@@ -2,7 +2,7 @@ import os
 import shutil
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.config import UPLOAD_DIR
-from app.services.pdf_service import load_pdf
+from app.services.pdf_service import load_document
 from app.services.vector_service import split_documents, store_documents, clear_vectorstore
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -11,15 +11,25 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
-    if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+    allowed_extensions = [".pdf", ".docx", ".txt"]
+
+    file_extension = os.path.splitext(file.filename)[1].lower()
+
+    if file_extension not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF, DOCX, and TXT files are allowed."
+        )
 
     file_path = os.path.join(UPLOAD_DIR, file.filename)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    documents = load_pdf(file_path)
+    try:
+        documents = load_document(file_path)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
     if not documents:
         raise HTTPException(

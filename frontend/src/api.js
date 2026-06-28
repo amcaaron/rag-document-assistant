@@ -22,3 +22,8 @@ export const askQuestion = async (question) => {
 
   return response.data;
 };
+
+export const clearDocument = async () => {
+  const response = await axios.delete(`${API_BASE_URL}/documents/clear`);
+  return response.data;
+};

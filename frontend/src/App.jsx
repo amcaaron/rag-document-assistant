@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { uploadPDF, askQuestion } from "./api";
+import { uploadPDF, askQuestion, clearDocument } from "./api";
 import "./styles.css";
 
 function App() {
@@ -8,6 +8,8 @@ function App() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [currentDocument, setCurrentDocument] = useState(null);
   const [loadingUpload, setLoadingUpload] = useState(false);
   const [loadingAnswer, setLoadingAnswer] = useState(false);
 
@@ -22,13 +24,18 @@ function App() {
     setAnswer("");
     setSources([]);
     setQuestion("");
+    setChatHistory([]);
 
     try {
       const data = await uploadPDF(file);
 
-      setUploadMessage(
-        `${data.message} Pages loaded: ${data.pages_loaded}. Chunks created: ${data.chunks_created}.`
-      );
+        setCurrentDocument({
+          filename: data.filename,
+          pages: data.pages_loaded,
+          chunks: data.chunks_created,
+        });
+
+        setUploadMessage(data.message);
     } catch (error) {
       setUploadMessage(
         error.response?.data?.detail || "Upload failed. Please try again."
@@ -39,27 +46,51 @@ function App() {
   };
 
   const handleAsk = async () => {
+    if (!currentDocument) {
+      setAnswer("Please upload a document before asking a question.");
+      return;
+    }
+  
     if (!question.trim()) {
       setAnswer("Please enter a question first.");
       return;
     }
-
+  
+    const userQuestion = question;
+  
     setLoadingAnswer(true);
+    setQuestion("");
     setAnswer("");
     setSources([]);
-
+  
     try {
-      const data = await askQuestion(question);
-
+      const data = await askQuestion(userQuestion);
+  
+      const newChatEntry = {
+        question: userQuestion,
+        answer: data.answer,
+        sources: data.sources || [],
+      };
+  
+      setChatHistory((prevHistory) => [...prevHistory, newChatEntry]);
+  
       setAnswer(data.answer);
       setSources(data.sources || []);
     } catch (error) {
-      setAnswer(
+      const errorMessage =
         error.response?.data?.detail ||
-          "Something went wrong while getting the answer."
-      );
+        "Something went wrong while getting the answer.";
+  
+      const newChatEntry = {
+        question: userQuestion,
+        answer: errorMessage,
+        sources: [],
+      };
+  
+      setChatHistory((prevHistory) => [...prevHistory, newChatEntry]);
+      setAnswer(errorMessage);
     }
-
+  
     setLoadingAnswer(false);
   };
 
@@ -67,6 +98,26 @@ function App() {
     setQuestion("");
     setAnswer("");
     setSources([]);
+    setChatHistory([]);
+  };
+
+  const handleClearDocument = async () => {
+    try {
+      const data = await clearDocument();
+  
+      setCurrentDocument(null);
+      setUploadMessage(data.message);
+      setQuestion("");
+      setAnswer("");
+      setSources([]);
+      setChatHistory([]);
+      setFile(null);
+    } catch (error) {
+      setUploadMessage(
+        error.response?.data?.detail ||
+          "Something went wrong while clearing the document."
+      );
+    }
   };
 
   return (
@@ -85,7 +136,7 @@ function App() {
 
         <input
           type="file"
-          accept="application/pdf"
+          accept=".pdf,.docx,.txt"
           onChange={(e) => setFile(e.target.files[0])}
         />
 
@@ -96,48 +147,84 @@ function App() {
         {uploadMessage && <p className="message">{uploadMessage}</p>}
       </section>
 
-      <section className="card">
-        <h2>Ask a Question</h2>
+      {currentDocument && (
+        <section className="document-card">
+          <h3>Current Document</h3>
 
-        <textarea
-          placeholder="Example: What is this document about?"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-        />
+          <p>
+            <strong>File:</strong> {currentDocument.filename}
+          </p>
+          <p>
+            <strong>Pages:</strong> {currentDocument.pages}
+          </p>
+          <p>
+            <strong>Chunks:</strong> {currentDocument.chunks}
+          </p>
 
-        <div className="button-row">
-          <button onClick={handleAsk} disabled={loadingAnswer}>
-            {loadingAnswer ? "Thinking..." : "Ask Question"}
+          <button onClick={handleClearDocument} className="danger-button">
+            Clear Current Document
           </button>
+        </section>
+      )}
 
-          <button onClick={handleClear} className="secondary-button">
-            Clear
-          </button>
-        </div>
-      </section>
-
-      {answer && (
         <section className="card">
-          <h2>Answer</h2>
-          <p className="answer">{answer}</p>
+          <h2>Ask a Question</h2>
 
-          {sources.length > 0 && (
-            <>
-              <h3>Sources</h3>
+          <textarea
+            placeholder="Example: What is this document about?"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+          />
 
-              {sources.map((source, index) => (
-                <div key={index} className="source">
-                  <p>
-                    <strong>Source:</strong> {source.source}
-                  </p>
-                  <p>
-                    <strong>Page:</strong> {source.page}
-                  </p>
-                  <p>{source.preview}...</p>
-                </div>
-              ))}
-            </>
+          <div className="button-row">
+            <button onClick={handleAsk} disabled={loadingAnswer || !currentDocument}>
+              {loadingAnswer ? "Thinking..." : "Ask Question"}
+            </button>
+
+            <button onClick={handleClear} className="secondary-button">
+              Clear
+            </button>
+          </div>
+
+          {!currentDocument && (
+            <p className="helper-text">
+              Upload a PDF before asking a question.
+            </p>
           )}
+        </section>
+
+      {chatHistory.length > 0 && (
+        <section className="card">
+          <h2>Chat History</h2>
+
+          {chatHistory.map((chat, index) => (
+            <div key={index} className="chat-entry">
+              <div className="user-message">
+                <p className="message-label">You</p>
+                <p>{chat.question}</p>
+              </div>
+
+              <div className="assistant-message">
+                <p className="message-label">Assistant</p>
+                <p className="answer">{chat.answer}</p>
+
+                {chat.sources.length > 0 && (
+                  <div className="chat-sources">
+                    <h3>Sources</h3>
+
+                    {chat.sources.map((source, sourceIndex) => (
+                      <div key={sourceIndex} className="source">
+                        <p className="citation-title">
+                          {source.source} — Page {source.page}
+                        </p>
+                        <p>{source.preview}...</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </section>
       )}
     </div>
