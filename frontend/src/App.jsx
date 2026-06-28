@@ -3,7 +3,6 @@ import {
   uploadDocument,
   getDocuments,
   askQuestion,
-  deleteDocument,
   clearAllDocuments,
 } from "./api";
 import "./styles.css";
@@ -60,9 +59,9 @@ function App() {
       setUploadMessage(
         error.response?.data?.detail || "Upload failed. Please try again."
       );
+    } finally {
+      setLoadingUpload(false);
     }
-
-    setLoadingUpload(false);
   };
 
   const handleSelectDocument = (documentId) => {
@@ -108,19 +107,26 @@ function App() {
     try {
       const data = await askQuestion(userQuestion, selectedDocumentId);
 
+      const safeAnswer =
+        typeof data.answer === "string"
+          ? data.answer
+          : JSON.stringify(data.answer);
+
+      const safeSources = Array.isArray(data.sources) ? data.sources : [];
+
       const newChatEntry = {
         question: userQuestion,
-        answer: data.answer,
-        sources: data.sources || [],
+        answer: safeAnswer,
+        sources: safeSources,
       };
 
       setChatHistory((prevHistory) => [...prevHistory, newChatEntry]);
-
-      setAnswer(data.answer);
-      setSources(data.sources || []);
+      setAnswer(safeAnswer);
+      setSources(safeSources);
     } catch (error) {
       const errorMessage =
         error.response?.data?.detail ||
+        error.message ||
         "Something went wrong while getting the answer.";
 
       const newChatEntry = {
@@ -131,9 +137,9 @@ function App() {
 
       setChatHistory((prevHistory) => [...prevHistory, newChatEntry]);
       setAnswer(errorMessage);
+    } finally {
+      setLoadingAnswer(false);
     }
-
-    setLoadingAnswer(false);
   };
 
   const handleClear = () => {
@@ -167,11 +173,12 @@ function App() {
   return (
     <div className="app">
       <header className="hero">
-        <p className="badge">RAG Document Assistant</p>
+        <p className="badge">RAG Personal Document Assistant</p>
         <h1>DocuMind AI</h1>
         <p>
-          Upload PDF, DOCX, or TXT documents and ask questions using semantic
-          search, OpenAI, ChromaDB, and source citations.
+          Upload your personal PDFs, DOCX, or TXT files and ask intelligent
+          questions with semantic search, OpenAI, ChromaDB, and clickable source
+          citations.
         </p>
       </header>
 
@@ -267,7 +274,7 @@ function App() {
         )}
       </section>
 
-      {chatHistory.length > 0 && (
+      {Array.isArray(chatHistory) && chatHistory.length > 0 && (
         <section className="card">
           <h2>Chat History</h2>
 
@@ -275,28 +282,37 @@ function App() {
             <div key={index} className="chat-entry">
               <div className="user-message">
                 <p className="message-label">You</p>
-                <p>{chat.question}</p>
+                <p>{chat?.question || "Question unavailable."}</p>
               </div>
 
               <div className="assistant-message">
                 <p className="message-label">Assistant</p>
-                <p className="answer">{chat.answer}</p>
+                <p className="answer">{chat?.answer || "Answer unavailable."}</p>
 
-                {chat.sources.length > 0 && (
+                {Array.isArray(chat?.sources) && chat.sources.length > 0 && (
                   <div className="chat-sources">
                     <h3>Sources</h3>
 
                     {chat.sources.map((source, sourceIndex) => (
                       <div key={sourceIndex} className="source">
-                        <a
-                          className="citation-title citation-link"
-                          href={source.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {source.source} — Page {source.page}
-                        </a>
-                        <p>{source.preview}...</p>
+                        {source?.url ? (
+                          <a
+                            className="citation-title citation-link"
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {source?.source || "Source"} — Page{" "}
+                            {source?.page || "Unknown"}
+                          </a>
+                        ) : (
+                          <p className="citation-title">
+                            {source?.source || "Source"} — Page{" "}
+                            {source?.page || "Unknown"}
+                          </p>
+                        )}
+
+                        <p>{source?.preview || "No preview available."}...</p>
                       </div>
                     ))}
                   </div>
