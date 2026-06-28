@@ -1,3 +1,4 @@
+import os
 from langchain_openai import ChatOpenAI
 from app.services.vector_service import get_vectorstore
 
@@ -14,8 +15,11 @@ def answer_question(question: str):
 
     sources = []
     for doc in docs:
+        source_path = doc.metadata.get("source", "Unknown")
+        filename = os.path.basename(source_path)
+
         sources.append({
-            "source": doc.metadata.get("source", "Unknown"),
+            "source": filename,
             "page": doc.metadata.get("page", "Unknown"),
             "preview": doc.page_content[:250]
         })

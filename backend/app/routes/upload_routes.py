@@ -61,3 +61,11 @@ async def upload_pdf(file: UploadFile = File(...)):
         "pages_loaded": len(documents),
         "chunks_created": len(chunks)
     }
+
+@router.delete("/clear")
+def clear_document():
+    clear_vectorstore()
+
+    return {
+        "message": "Current document cleared successfully"
+    }
