@@ -7,8 +7,9 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 class QuestionRequest(BaseModel):
     question: str
+    document_id: str
 
 
 @router.post("/ask")
 def ask_question(request: QuestionRequest):
-    return answer_question(request.question)
+    return answer_question(request.question, request.document_id)

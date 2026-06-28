@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { uploadPDF, askQuestion, clearDocument } from "./api";
+import {
+  uploadDocument,
+  getDocuments,
+  askQuestion,
+  deleteDocument,
+  clearAllDocuments,
+} from "./api";
 import "./styles.css";
 
 function App() {
@@ -12,10 +18,21 @@ function App() {
   const [currentDocument, setCurrentDocument] = useState(null);
   const [loadingUpload, setLoadingUpload] = useState(false);
   const [loadingAnswer, setLoadingAnswer] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState("");
+
+  const loadDocuments = async () => {
+    try {
+      const data = await getDocuments();
+      setDocuments(data.documents || []);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const handleUpload = async () => {
     if (!file) {
-      setUploadMessage("Please select a PDF first.");
+      setUploadMessage("Please select a document first.");
       return;
     }
 
@@ -27,15 +44,18 @@ function App() {
     setChatHistory([]);
 
     try {
-      const data = await uploadPDF(file);
+      const data = await uploadDocument(file);
 
-        setCurrentDocument({
-          filename: data.filename,
-          pages: data.pages_loaded,
-          chunks: data.chunks_created,
-        });
+      setCurrentDocument({
+        document_id: data.document_id,
+        filename: data.filename,
+        pages: data.pages_loaded,
+        chunks: data.chunks_created,
+      });
 
-        setUploadMessage(data.message);
+      setSelectedDocumentId(data.document_id);
+      setUploadMessage(data.message);
+      await loadDocuments();
     } catch (error) {
       setUploadMessage(
         error.response?.data?.detail || "Upload failed. Please try again."
@@ -45,52 +65,74 @@ function App() {
     setLoadingUpload(false);
   };
 
-  const handleAsk = async () => {
-    if (!currentDocument) {
-      setAnswer("Please upload a document before asking a question.");
+  const handleSelectDocument = (documentId) => {
+    const selected = documents.find((doc) => doc.document_id === documentId);
+
+    if (!selected) {
       return;
     }
-  
+
+    setSelectedDocumentId(documentId);
+    setCurrentDocument({
+      document_id: selected.document_id,
+      filename: selected.filename,
+      pages: selected.pages_loaded,
+      chunks: selected.chunks_created,
+    });
+
+    setQuestion("");
+    setAnswer("");
+    setSources([]);
+    setChatHistory([]);
+    setUploadMessage(`Selected document: ${selected.filename}`);
+  };
+
+  const handleAsk = async () => {
+    if (!selectedDocumentId) {
+      setAnswer("Please upload or select a document before asking a question.");
+      return;
+    }
+
     if (!question.trim()) {
       setAnswer("Please enter a question first.");
       return;
     }
-  
+
     const userQuestion = question;
-  
+
     setLoadingAnswer(true);
     setQuestion("");
     setAnswer("");
     setSources([]);
-  
+
     try {
-      const data = await askQuestion(userQuestion);
-  
+      const data = await askQuestion(userQuestion, selectedDocumentId);
+
       const newChatEntry = {
         question: userQuestion,
         answer: data.answer,
         sources: data.sources || [],
       };
-  
+
       setChatHistory((prevHistory) => [...prevHistory, newChatEntry]);
-  
+
       setAnswer(data.answer);
       setSources(data.sources || []);
     } catch (error) {
       const errorMessage =
         error.response?.data?.detail ||
         "Something went wrong while getting the answer.";
-  
+
       const newChatEntry = {
         question: userQuestion,
         answer: errorMessage,
         sources: [],
       };
-  
+
       setChatHistory((prevHistory) => [...prevHistory, newChatEntry]);
       setAnswer(errorMessage);
     }
-  
+
     setLoadingAnswer(false);
   };
 
@@ -101,11 +143,13 @@ function App() {
     setChatHistory([]);
   };
 
-  const handleClearDocument = async () => {
+  const handleClearAllDocuments = async () => {
     try {
-      const data = await clearDocument();
-  
+      const data = await clearAllDocuments();
+
+      setDocuments([]);
       setCurrentDocument(null);
+      setSelectedDocumentId("");
       setUploadMessage(data.message);
       setQuestion("");
       setAnswer("");
@@ -115,7 +159,7 @@ function App() {
     } catch (error) {
       setUploadMessage(
         error.response?.data?.detail ||
-          "Something went wrong while clearing the document."
+          "Something went wrong while clearing documents."
       );
     }
   };
@@ -126,13 +170,13 @@ function App() {
         <p className="badge">RAG Document Assistant</p>
         <h1>DocuMind AI</h1>
         <p>
-          Upload a PDF and ask questions using semantic search, OpenAI, ChromaDB,
-          and source citations.
+          Upload PDF, DOCX, or TXT documents and ask questions using semantic
+          search, OpenAI, ChromaDB, and source citations.
         </p>
       </header>
 
       <section className="card">
-        <h2>Upload PDF</h2>
+        <h2>Upload Document</h2>
 
         <input
           type="file"
@@ -141,11 +185,45 @@ function App() {
         />
 
         <button onClick={handleUpload} disabled={loadingUpload}>
-          {loadingUpload ? "Processing..." : "Upload and Index PDF"}
+          {loadingUpload ? "Processing..." : "Upload and Index Document"}
         </button>
 
         {uploadMessage && <p className="message">{uploadMessage}</p>}
       </section>
+
+      {documents.length > 0 && (
+        <section className="card">
+          <h2>Uploaded Documents</h2>
+
+          <div className="document-list">
+            {documents.map((doc) => (
+              <div
+                key={doc.document_id}
+                className={
+                  doc.document_id === selectedDocumentId
+                    ? "document-item selected-document"
+                    : "document-item"
+                }
+              >
+                <div>
+                  <p className="document-name">{doc.filename}</p>
+                  <p className="document-meta">
+                    Pages: {doc.pages_loaded} | Chunks: {doc.chunks_created}
+                  </p>
+                </div>
+
+                <button onClick={() => handleSelectDocument(doc.document_id)}>
+                  Select
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={handleClearAllDocuments} className="danger-button">
+            Clear All Documents
+          </button>
+        </section>
+      )}
 
       {currentDocument && (
         <section className="document-card">
@@ -160,38 +238,34 @@ function App() {
           <p>
             <strong>Chunks:</strong> {currentDocument.chunks}
           </p>
-
-          <button onClick={handleClearDocument} className="danger-button">
-            Clear Current Document
-          </button>
         </section>
       )}
 
-        <section className="card">
-          <h2>Ask a Question</h2>
+      <section className="card">
+        <h2>Ask a Question</h2>
 
-          <textarea
-            placeholder="Example: What is this document about?"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-          />
+        <textarea
+          placeholder="Example: What is this document about?"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+        />
 
-          <div className="button-row">
-            <button onClick={handleAsk} disabled={loadingAnswer || !currentDocument}>
-              {loadingAnswer ? "Thinking..." : "Ask Question"}
-            </button>
+        <div className="button-row">
+          <button onClick={handleAsk} disabled={loadingAnswer || !selectedDocumentId}>
+            {loadingAnswer ? "Thinking..." : "Ask Question"}
+          </button>
 
-            <button onClick={handleClear} className="secondary-button">
-              Clear
-            </button>
-          </div>
+          <button onClick={handleClear} className="secondary-button">
+            Clear Chat
+          </button>
+        </div>
 
-          {!currentDocument && (
-            <p className="helper-text">
-              Upload a PDF before asking a question.
-            </p>
-          )}
-        </section>
+        {!selectedDocumentId && (
+          <p className="helper-text">
+            Upload or select a document before asking a question.
+          </p>
+        )}
+      </section>
 
       {chatHistory.length > 0 && (
         <section className="card">
@@ -214,9 +288,14 @@ function App() {
 
                     {chat.sources.map((source, sourceIndex) => (
                       <div key={sourceIndex} className="source">
-                        <p className="citation-title">
+                        <a
+                          className="citation-title citation-link"
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           {source.source} — Page {source.page}
-                        </p>
+                        </a>
                         <p>{source.preview}...</p>
                       </div>
                     ))}

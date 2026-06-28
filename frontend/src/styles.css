@@ -243,4 +243,47 @@ button:disabled {
   button {
     width: 100%;
   }
+
+  .document-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .document-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+  }
+  
+  .selected-document {
+    border: 2px solid #2563eb;
+    background: #eff6ff;
+  }
+  
+  .document-name {
+    margin: 0;
+    font-weight: 700;
+    color: #111827;
+  }
+  
+  .document-meta {
+    margin: 4px 0 0 0;
+    color: #374151;
+    font-size: 14px;
+  }
+
+  .citation-link {
+    display: inline-block;
+    text-decoration: none;
+  }
+  
+  .citation-link:hover {
+    text-decoration: underline;
+  }
 }
