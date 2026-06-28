@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
 from app.routes.upload_routes import router as upload_router
 from app.routes.chat_routes import router as chat_router
 
