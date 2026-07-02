@@ -68,4 +68,14 @@ const handleGenerateIntelligence = async () => {
   } finally {
     setLoadingIntelligence(false);
   }
+
+  
+};
+
+export const getDocumentQuiz = async (documentId) => {
+  const response = await axios.post(
+    `${API_BASE_URL}/documents/${documentId}/quiz`
+  );
+
+  return response.data;
 };

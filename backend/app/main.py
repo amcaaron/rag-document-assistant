@@ -7,6 +7,8 @@ from app.routes.chat_routes import router as chat_router
 
 from app.routes.intelligence_routes import router as intelligence_router
 
+from app.routes.quiz_routes import router as quiz_router
+
 app = FastAPI(title="DocuMind AI API")
 
 app.add_middleware(
@@ -27,6 +29,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(upload_router)
 app.include_router(chat_router)
 app.include_router(intelligence_router)
+app.include_router(quiz_router)
 
 @app.get("/")
 def home():

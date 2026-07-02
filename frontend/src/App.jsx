@@ -5,6 +5,7 @@ import {
   askQuestion,
   clearAllDocuments,
   getDocumentIntelligence,
+  getDocumentQuiz,
 } from "./api";
 import "./styles.css";
 
@@ -20,8 +21,17 @@ function App() {
   const [loadingAnswer, setLoadingAnswer] = useState(false);
   const [documents, setDocuments] = useState([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
+
   const [documentIntelligence, setDocumentIntelligence] = useState(null);
   const [loadingIntelligence, setLoadingIntelligence] = useState(false);
+
+  const [documentQuiz, setDocumentQuiz] = useState(null);
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
+  const [showQuizAnswers, setShowQuizAnswers] = useState({});
+  const [activeQuizPanel, setActiveQuizPanel] = useState("multiple_choice");
+  const [activeMultipleChoiceQuestion, setActiveMultipleChoiceQuestion] =
+    useState(0);
+  const [activeShortAnswerQuestion, setActiveShortAnswerQuestion] = useState(0);
 
   const [openIntelligencePanels, setOpenIntelligencePanels] = useState({
     summary: true,
@@ -42,6 +52,13 @@ function App() {
     });
   };
 
+  const toggleQuizAnswer = (questionKey) => {
+    setShowQuizAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [questionKey]: !prevAnswers[questionKey],
+    }));
+  };
+
   const loadDocuments = async () => {
     try {
       const data = await getDocuments();
@@ -56,25 +73,25 @@ function App() {
       setUploadMessage("Please select a document first.");
       return;
     }
-  
+
     setLoadingUpload(true);
     setUploadMessage("Uploading and indexing document...");
-  
+
     try {
       const data = await uploadDocument(file);
       console.log("FRONTEND UPLOAD RESPONSE:", data);
-  
-      setUploadMessage("Upload worked.");
-  
+
+      setUploadMessage(data.message || "Document uploaded successfully.");
+
       setCurrentDocument({
         document_id: data.document_id,
         filename: data.filename || file.name,
         pages: data.pages_loaded || 0,
         chunks: data.chunks_created || 0,
       });
-  
+
       setSelectedDocumentId(data.document_id || "");
-  
+
       setDocuments([
         {
           document_id: data.document_id,
@@ -83,15 +100,20 @@ function App() {
           chunks_created: data.chunks_created || 0,
         },
       ]);
-  
+
       setQuestion("");
       setAnswer("");
       setSources([]);
       setChatHistory([]);
       setDocumentIntelligence(null);
+      setDocumentQuiz(null);
+      setShowQuizAnswers({});
+      setActiveQuizPanel("multiple_choice");
+      setActiveMultipleChoiceQuestion(0);
+      setActiveShortAnswerQuestion(0);
     } catch (error) {
       console.error("FRONTEND UPLOAD ERROR:", error);
-  
+
       setUploadMessage(
         error.response?.data?.detail ||
           error.message ||
@@ -106,27 +128,32 @@ function App() {
     if (!documentId) {
       return;
     }
-  
+
     const selected = documents.find((doc) => doc.document_id === documentId);
-  
+
     if (!selected) {
       return;
     }
-  
+
     setSelectedDocumentId(documentId);
-  
+
     setCurrentDocument({
       document_id: selected.document_id,
       filename: selected.filename || "Untitled document",
       pages: selected.pages_loaded || 0,
       chunks: selected.chunks_created || 0,
     });
-  
+
     setQuestion("");
     setAnswer("");
     setSources([]);
     setChatHistory([]);
     setDocumentIntelligence(null);
+    setDocumentQuiz(null);
+    setShowQuizAnswers({});
+    setActiveQuizPanel("multiple_choice");
+    setActiveMultipleChoiceQuestion(0);
+    setActiveShortAnswerQuestion(0);
     setUploadMessage(`Selected document: ${selected.filename}`);
   };
 
@@ -206,6 +233,11 @@ function App() {
       setSources([]);
       setChatHistory([]);
       setDocumentIntelligence(null);
+      setDocumentQuiz(null);
+      setShowQuizAnswers({});
+      setActiveQuizPanel("multiple_choice");
+      setActiveMultipleChoiceQuestion(0);
+      setActiveShortAnswerQuestion(0);
       setFile(null);
     } catch (error) {
       setUploadMessage(
@@ -220,19 +252,19 @@ function App() {
       setUploadMessage("Please upload or select a document first.");
       return;
     }
-  
+
     setLoadingIntelligence(true);
     setDocumentIntelligence(null);
-  
+
     try {
       const data = await getDocumentIntelligence(selectedDocumentId);
-  
+
       console.log("DOCUMENT INTELLIGENCE RESPONSE:", data);
-  
+
       setDocumentIntelligence(data.intelligence);
     } catch (error) {
       console.error("DOCUMENT INTELLIGENCE ERROR:", error);
-  
+
       setUploadMessage(
         error.response?.data?.detail ||
           error.message ||
@@ -240,6 +272,38 @@ function App() {
       );
     } finally {
       setLoadingIntelligence(false);
+    }
+  };
+
+  const handleGenerateQuiz = async () => {
+    if (!selectedDocumentId) {
+      setUploadMessage("Please upload or select a document first.");
+      return;
+    }
+
+    setLoadingQuiz(true);
+    setDocumentQuiz(null);
+    setShowQuizAnswers({});
+    setActiveQuizPanel("multiple_choice");
+    setActiveMultipleChoiceQuestion(0);
+    setActiveShortAnswerQuestion(0);
+
+    try {
+      const data = await getDocumentQuiz(selectedDocumentId);
+
+      console.log("DOCUMENT QUIZ RESPONSE:", data);
+
+      setDocumentQuiz(data.quiz);
+    } catch (error) {
+      console.error("DOCUMENT QUIZ ERROR:", error);
+
+      setUploadMessage(
+        error.response?.data?.detail ||
+          error.message ||
+          "Something went wrong while generating the quiz."
+      );
+    } finally {
+      setLoadingQuiz(false);
     }
   };
 
@@ -329,7 +393,13 @@ function App() {
             onClick={handleGenerateIntelligence}
             disabled={loadingIntelligence}
           >
-            {loadingIntelligence ? "Generating Overview..." : "Generate Document Overview"}
+            {loadingIntelligence
+              ? "Generating Overview..."
+              : "Generate Document Overview"}
+          </button>
+
+          <button onClick={handleGenerateQuiz} disabled={loadingQuiz}>
+            {loadingQuiz ? "Generating Quiz..." : "Generate Study Quiz"}
           </button>
         </section>
       )}
@@ -340,8 +410,8 @@ function App() {
             <p className="section-eyebrow">Document Overview</p>
             <h2>AI Document Intelligence</h2>
             <p className="intelligence-subtitle">
-              Quickly understand the document with summaries, key ideas, glossary
-              terms, suggested questions, and related topics.
+              Quickly understand the document with summaries, key ideas,
+              glossary terms, suggested questions, and related topics.
             </p>
           </div>
 
@@ -416,9 +486,11 @@ function App() {
                 <div className="intelligence-content">
                   <h3>Key Takeaways</h3>
                   <ul className="clean-list">
-                    {documentIntelligence.key_takeaways.map((takeaway, index) => (
-                      <li key={index}>{takeaway}</li>
-                    ))}
+                    {documentIntelligence.key_takeaways.map(
+                      (takeaway, index) => (
+                        <li key={index}>{takeaway}</li>
+                      )
+                    )}
                   </ul>
                 </div>
               )}
@@ -479,6 +551,176 @@ function App() {
         </section>
       )}
 
+      {documentQuiz && (
+        <section className="card quiz-card">
+          <div className="quiz-header">
+            <p className="section-eyebrow">Study Mode</p>
+            <h2>Document Quiz</h2>
+            <p className="intelligence-subtitle">
+              Test your understanding with multiple-choice and short-answer
+              questions generated from the selected document.
+            </p>
+          </div>
+
+          <div className="intelligence-tabs">
+            <button
+              className={
+                activeQuizPanel === "multiple_choice"
+                  ? "intelligence-tab active-tab"
+                  : "intelligence-tab"
+              }
+              onClick={() => setActiveQuizPanel("multiple_choice")}
+            >
+              Multiple Choice
+            </button>
+
+            <button
+              className={
+                activeQuizPanel === "short_answer"
+                  ? "intelligence-tab active-tab"
+                  : "intelligence-tab"
+              }
+              onClick={() => setActiveQuizPanel("short_answer")}
+            >
+              Short Answer
+            </button>
+          </div>
+
+          <div className="quiz-content-panel">
+            {activeQuizPanel === "multiple_choice" &&
+              Array.isArray(documentQuiz.multiple_choice) &&
+              documentQuiz.multiple_choice.length > 0 && (
+                <div className="quiz-section">
+                  <h3>Multiple Choice</h3>
+
+                  <div className="intelligence-tabs">
+                    {documentQuiz.multiple_choice.map((_, index) => (
+                      <button
+                        key={index}
+                        className={
+                          activeMultipleChoiceQuestion === index
+                            ? "intelligence-tab active-tab"
+                            : "intelligence-tab"
+                        }
+                        onClick={() => setActiveMultipleChoiceQuestion(index)}
+                      >
+                        Question {index + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const item =
+                      documentQuiz.multiple_choice[
+                        activeMultipleChoiceQuestion
+                      ];
+                    const questionKey = `mc-${activeMultipleChoiceQuestion}`;
+
+                    if (!item) return null;
+
+                    return (
+                      <div className="quiz-question-card single-question-panel">
+                        <p className="quiz-question">
+                          {activeMultipleChoiceQuestion + 1}. {item.question}
+                        </p>
+
+                        <div className="quiz-options">
+                          {Array.isArray(item.options) &&
+                            item.options.map((option, optionIndex) => (
+                              <p key={optionIndex} className="quiz-option">
+                                {option}
+                              </p>
+                            ))}
+                        </div>
+
+                        <button
+                          className="secondary-button quiz-answer-button"
+                          onClick={() => toggleQuizAnswer(questionKey)}
+                        >
+                          {showQuizAnswers[questionKey]
+                            ? "Hide Answer"
+                            : "Show Answer"}
+                        </button>
+
+                        {showQuizAnswers[questionKey] && (
+                          <div className="quiz-answer-box">
+                            <p>
+                              <strong>Answer:</strong> {item.answer}
+                            </p>
+                            <p>
+                              <strong>Explanation:</strong> {item.explanation}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+            {activeQuizPanel === "short_answer" &&
+              Array.isArray(documentQuiz.short_answer) &&
+              documentQuiz.short_answer.length > 0 && (
+                <div className="quiz-section">
+                  <h3>Short Answer</h3>
+
+                  <div className="intelligence-tabs">
+                    {documentQuiz.short_answer.map((_, index) => (
+                      <button
+                        key={index}
+                        className={
+                          activeShortAnswerQuestion === index
+                            ? "intelligence-tab active-tab"
+                            : "intelligence-tab"
+                        }
+                        onClick={() => setActiveShortAnswerQuestion(index)}
+                      >
+                        Question {index + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const item =
+                      documentQuiz.short_answer[activeShortAnswerQuestion];
+                    const questionKey = `sa-${activeShortAnswerQuestion}`;
+
+                    if (!item) return null;
+
+                    return (
+                      <div className="quiz-question-card single-question-panel">
+                        <p className="quiz-question">
+                          {activeShortAnswerQuestion + 1}. {item.question}
+                        </p>
+
+                        <button
+                          className="secondary-button quiz-answer-button"
+                          onClick={() => toggleQuizAnswer(questionKey)}
+                        >
+                          {showQuizAnswers[questionKey]
+                            ? "Hide Answer"
+                            : "Show Answer"}
+                        </button>
+
+                        {showQuizAnswers[questionKey] && (
+                          <div className="quiz-answer-box">
+                            <p>
+                              <strong>Answer:</strong> {item.answer}
+                            </p>
+                            <p>
+                              <strong>Explanation:</strong> {item.explanation}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+          </div>
+        </section>
+      )}
+
       <section className="card">
         <h2>Ask a Question</h2>
 
@@ -489,7 +731,10 @@ function App() {
         />
 
         <div className="button-row">
-          <button onClick={handleAsk} disabled={loadingAnswer || !selectedDocumentId}>
+          <button
+            onClick={handleAsk}
+            disabled={loadingAnswer || !selectedDocumentId}
+          >
             {loadingAnswer ? "Thinking..." : "Ask Question"}
           </button>
 
@@ -518,7 +763,9 @@ function App() {
 
               <div className="assistant-message">
                 <p className="message-label">Assistant</p>
-                <p className="answer">{chat?.answer || "Answer unavailable."}</p>
+                <p className="answer">
+                  {chat?.answer || "Answer unavailable."}
+                </p>
 
                 {Array.isArray(chat?.sources) && chat.sources.length > 0 && (
                   <div className="chat-sources">
@@ -556,5 +803,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;
