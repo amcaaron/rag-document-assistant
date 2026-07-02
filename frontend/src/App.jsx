@@ -4,6 +4,7 @@ import {
   getDocuments,
   askQuestion,
   clearAllDocuments,
+  getDocumentIntelligence,
 } from "./api";
 import "./styles.css";
 
@@ -19,6 +20,27 @@ function App() {
   const [loadingAnswer, setLoadingAnswer] = useState(false);
   const [documents, setDocuments] = useState([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const [documentIntelligence, setDocumentIntelligence] = useState(null);
+  const [loadingIntelligence, setLoadingIntelligence] = useState(false);
+
+  const [openIntelligencePanels, setOpenIntelligencePanels] = useState({
+    summary: true,
+    takeaways: false,
+    terms: false,
+    questions: false,
+    related: false,
+  });
+
+  const toggleIntelligencePanel = (panelName) => {
+    setOpenIntelligencePanels({
+      summary: false,
+      takeaways: false,
+      terms: false,
+      questions: false,
+      related: false,
+      [panelName]: true,
+    });
+  };
 
   const loadDocuments = async () => {
     try {
@@ -34,30 +56,46 @@ function App() {
       setUploadMessage("Please select a document first.");
       return;
     }
-
+  
     setLoadingUpload(true);
-    setUploadMessage("");
-    setAnswer("");
-    setSources([]);
-    setQuestion("");
-    setChatHistory([]);
-
+    setUploadMessage("Uploading and indexing document...");
+  
     try {
       const data = await uploadDocument(file);
-
+      console.log("FRONTEND UPLOAD RESPONSE:", data);
+  
+      setUploadMessage("Upload worked.");
+  
       setCurrentDocument({
         document_id: data.document_id,
-        filename: data.filename,
-        pages: data.pages_loaded,
-        chunks: data.chunks_created,
+        filename: data.filename || file.name,
+        pages: data.pages_loaded || 0,
+        chunks: data.chunks_created || 0,
       });
-
-      setSelectedDocumentId(data.document_id);
-      setUploadMessage(data.message);
-      await loadDocuments();
+  
+      setSelectedDocumentId(data.document_id || "");
+  
+      setDocuments([
+        {
+          document_id: data.document_id,
+          filename: data.filename || file.name,
+          pages_loaded: data.pages_loaded || 0,
+          chunks_created: data.chunks_created || 0,
+        },
+      ]);
+  
+      setQuestion("");
+      setAnswer("");
+      setSources([]);
+      setChatHistory([]);
+      setDocumentIntelligence(null);
     } catch (error) {
+      console.error("FRONTEND UPLOAD ERROR:", error);
+  
       setUploadMessage(
-        error.response?.data?.detail || "Upload failed. Please try again."
+        error.response?.data?.detail ||
+          error.message ||
+          "Upload failed. Please try again."
       );
     } finally {
       setLoadingUpload(false);
@@ -65,24 +103,30 @@ function App() {
   };
 
   const handleSelectDocument = (documentId) => {
+    if (!documentId) {
+      return;
+    }
+  
     const selected = documents.find((doc) => doc.document_id === documentId);
-
+  
     if (!selected) {
       return;
     }
-
+  
     setSelectedDocumentId(documentId);
+  
     setCurrentDocument({
       document_id: selected.document_id,
-      filename: selected.filename,
-      pages: selected.pages_loaded,
-      chunks: selected.chunks_created,
+      filename: selected.filename || "Untitled document",
+      pages: selected.pages_loaded || 0,
+      chunks: selected.chunks_created || 0,
     });
-
+  
     setQuestion("");
     setAnswer("");
     setSources([]);
     setChatHistory([]);
+    setDocumentIntelligence(null);
     setUploadMessage(`Selected document: ${selected.filename}`);
   };
 
@@ -161,12 +205,41 @@ function App() {
       setAnswer("");
       setSources([]);
       setChatHistory([]);
+      setDocumentIntelligence(null);
       setFile(null);
     } catch (error) {
       setUploadMessage(
         error.response?.data?.detail ||
           "Something went wrong while clearing documents."
       );
+    }
+  };
+
+  const handleGenerateIntelligence = async () => {
+    if (!selectedDocumentId) {
+      setUploadMessage("Please upload or select a document first.");
+      return;
+    }
+  
+    setLoadingIntelligence(true);
+    setDocumentIntelligence(null);
+  
+    try {
+      const data = await getDocumentIntelligence(selectedDocumentId);
+  
+      console.log("DOCUMENT INTELLIGENCE RESPONSE:", data);
+  
+      setDocumentIntelligence(data.intelligence);
+    } catch (error) {
+      console.error("DOCUMENT INTELLIGENCE ERROR:", error);
+  
+      setUploadMessage(
+        error.response?.data?.detail ||
+          error.message ||
+          "Something went wrong while generating the document overview."
+      );
+    } finally {
+      setLoadingIntelligence(false);
     }
   };
 
@@ -198,28 +271,34 @@ function App() {
         {uploadMessage && <p className="message">{uploadMessage}</p>}
       </section>
 
-      {documents.length > 0 && (
+      {Array.isArray(documents) && documents.length > 0 && (
         <section className="card">
           <h2>Uploaded Documents</h2>
 
           <div className="document-list">
-            {documents.map((doc) => (
+            {documents.map((doc, index) => (
               <div
-                key={doc.document_id}
+                key={doc?.document_id || index}
                 className={
-                  doc.document_id === selectedDocumentId
+                  doc?.document_id === selectedDocumentId
                     ? "document-item selected-document"
                     : "document-item"
                 }
               >
                 <div>
-                  <p className="document-name">{doc.filename}</p>
+                  <p className="document-name">
+                    {doc?.filename || "Untitled document"}
+                  </p>
                   <p className="document-meta">
-                    Pages: {doc.pages_loaded} | Chunks: {doc.chunks_created}
+                    Pages: {doc?.pages_loaded ?? 0} | Chunks:{" "}
+                    {doc?.chunks_created ?? 0}
                   </p>
                 </div>
 
-                <button onClick={() => handleSelectDocument(doc.document_id)}>
+                <button
+                  onClick={() => handleSelectDocument(doc?.document_id)}
+                  disabled={!doc?.document_id}
+                >
                   Select
                 </button>
               </div>
@@ -245,6 +324,158 @@ function App() {
           <p>
             <strong>Chunks:</strong> {currentDocument.chunks}
           </p>
+
+          <button
+            onClick={handleGenerateIntelligence}
+            disabled={loadingIntelligence}
+          >
+            {loadingIntelligence ? "Generating Overview..." : "Generate Document Overview"}
+          </button>
+        </section>
+      )}
+
+      {documentIntelligence && (
+        <section className="card intelligence-card">
+          <div className="intelligence-header">
+            <p className="section-eyebrow">Document Overview</p>
+            <h2>AI Document Intelligence</h2>
+            <p className="intelligence-subtitle">
+              Quickly understand the document with summaries, key ideas, glossary
+              terms, suggested questions, and related topics.
+            </p>
+          </div>
+
+          <div className="intelligence-tabs">
+            <button
+              className={
+                openIntelligencePanels.summary
+                  ? "intelligence-tab active-tab"
+                  : "intelligence-tab"
+              }
+              onClick={() => toggleIntelligencePanel("summary")}
+            >
+              Summary
+            </button>
+
+            <button
+              className={
+                openIntelligencePanels.takeaways
+                  ? "intelligence-tab active-tab"
+                  : "intelligence-tab"
+              }
+              onClick={() => toggleIntelligencePanel("takeaways")}
+            >
+              Key Takeaways
+            </button>
+
+            <button
+              className={
+                openIntelligencePanels.terms
+                  ? "intelligence-tab active-tab"
+                  : "intelligence-tab"
+              }
+              onClick={() => toggleIntelligencePanel("terms")}
+            >
+              Important Terms
+            </button>
+
+            <button
+              className={
+                openIntelligencePanels.questions
+                  ? "intelligence-tab active-tab"
+                  : "intelligence-tab"
+              }
+              onClick={() => toggleIntelligencePanel("questions")}
+            >
+              Suggested Questions
+            </button>
+
+            <button
+              className={
+                openIntelligencePanels.related
+                  ? "intelligence-tab active-tab"
+                  : "intelligence-tab"
+              }
+              onClick={() => toggleIntelligencePanel("related")}
+            >
+              Explore More
+            </button>
+          </div>
+
+          <div className="intelligence-content-panel">
+            {openIntelligencePanels.summary && (
+              <div className="intelligence-content">
+                <h3>Summary</h3>
+                <p>{documentIntelligence.summary}</p>
+              </div>
+            )}
+
+            {openIntelligencePanels.takeaways &&
+              Array.isArray(documentIntelligence.key_takeaways) &&
+              documentIntelligence.key_takeaways.length > 0 && (
+                <div className="intelligence-content">
+                  <h3>Key Takeaways</h3>
+                  <ul className="clean-list">
+                    {documentIntelligence.key_takeaways.map((takeaway, index) => (
+                      <li key={index}>{takeaway}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+            {openIntelligencePanels.terms &&
+              Array.isArray(documentIntelligence.important_terms) &&
+              documentIntelligence.important_terms.length > 0 && (
+                <div className="intelligence-content">
+                  <h3>Important Terms</h3>
+
+                  <div className="term-grid">
+                    {documentIntelligence.important_terms.map((item, index) => (
+                      <div key={index} className="term-card">
+                        <h4>{item.term}</h4>
+                        <p>{item.definition}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            {openIntelligencePanels.questions &&
+              Array.isArray(documentIntelligence.suggested_questions) &&
+              documentIntelligence.suggested_questions.length > 0 && (
+                <div className="intelligence-content">
+                  <h3>Suggested Questions</h3>
+
+                  <div className="question-chip-list">
+                    {documentIntelligence.suggested_questions.map(
+                      (suggested, index) => (
+                        <button
+                          key={index}
+                          className="question-chip"
+                          onClick={() => setQuestion(suggested)}
+                        >
+                          {suggested}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+            {openIntelligencePanels.related &&
+              Array.isArray(documentIntelligence.related_topics) &&
+              documentIntelligence.related_topics.length > 0 && (
+                <div className="intelligence-content">
+                  <h3>Explore More</h3>
+
+                  <ul className="clean-list related-list">
+                    {documentIntelligence.related_topics.map((topic, index) => (
+                      <li key={index}>{topic}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+          </div>
         </section>
       )}
 

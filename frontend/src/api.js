@@ -39,3 +39,33 @@ export const clearAllDocuments = async () => {
   const response = await axios.delete(`${API_BASE_URL}/documents/clear/all`);
   return response.data;
 };
+
+export const getDocumentIntelligence = async (documentId) => {
+  const response = await axios.post(
+    `${API_BASE_URL}/documents/${documentId}/intelligence`
+  );
+
+  return response.data;
+};
+
+const handleGenerateIntelligence = async () => {
+  if (!selectedDocumentId) {
+    setUploadMessage("Please upload or select a document first.");
+    return;
+  }
+
+  setLoadingIntelligence(true);
+  setDocumentIntelligence(null);
+
+  try {
+    const data = await getDocumentIntelligence(selectedDocumentId);
+    setDocumentIntelligence(data.intelligence);
+  } catch (error) {
+    setUploadMessage(
+      error.response?.data?.detail ||
+        "Something went wrong while generating the document overview."
+    );
+  } finally {
+    setLoadingIntelligence(false);
+  }
+};
