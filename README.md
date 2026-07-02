@@ -9,19 +9,19 @@ The application includes a React/Vite frontend deployed on Vercel and a FastAPI 
 Frontend:
 
 ```text
-https://rag-document-assistant-henna.vercel.app/
+https://documind-ai-assistant.vercel.app/
 ```
 
 Backend API:
 
 ```text
-Add your Render backend URL here
+https://documind-ai-backend-wr40.onrender.com
 ```
 
 FastAPI Docs:
 
 ```text
-Add your Render backend URL here/docs
+https://documind-ai-backend-wr40.onrender.com
 ```
 
 ## Features
