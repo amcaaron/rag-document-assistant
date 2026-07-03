@@ -33,6 +33,36 @@ function App() {
     useState(0);
   const [activeShortAnswerQuestion, setActiveShortAnswerQuestion] = useState(0);
 
+  const [activeChatSources, setActiveChatSources] = useState({});
+  const [activeSavedNoteSources, setActiveSavedNoteSources] = useState({});
+
+  const cleanSourceName = (sourceName) => {
+    if (!sourceName) {
+      return "Source";
+    }
+  
+    // Removes UUID prefix like:
+    // 7321e15f-24a0-4df9-90db-d2d9e93af3b1_filename.pdf
+    return sourceName.replace(
+      /^[0-9a-fA-F-]{36}_/,
+      ""
+    );
+  };
+
+  const setActiveChatSource = (chatIndex, sourceIndex) => {
+    setActiveChatSources((prevSources) => ({
+      ...prevSources,
+      [chatIndex]: sourceIndex,
+    }));
+  };
+  
+  const setActiveSavedNoteSource = (noteId, sourceIndex) => {
+    setActiveSavedNoteSources((prevSources) => ({
+      ...prevSources,
+      [noteId]: sourceIndex,
+    }));
+  };
+
   const [openIntelligencePanels, setOpenIntelligencePanels] = useState({
     summary: true,
     takeaways: false,
@@ -307,6 +337,34 @@ function App() {
     }
   };
 
+  const [savedNotes, setSavedNotes] = useState(() => {
+    const storedNotes = localStorage.getItem("documind_saved_notes");
+    return storedNotes ? JSON.parse(storedNotes) : [];
+  });
+
+  const saveNote = (chat) => {
+    const newNote = {
+      id: Date.now(),
+      question: chat.question,
+      answer: chat.answer,
+      sources: chat.sources || [],
+      documentName: currentDocument?.filename || "Unknown document",
+      createdAt: new Date().toLocaleString(),
+    };
+  
+    const updatedNotes = [newNote, ...savedNotes];
+  
+    setSavedNotes(updatedNotes);
+    localStorage.setItem("documind_saved_notes", JSON.stringify(updatedNotes));
+  };
+  
+  const deleteNote = (noteId) => {
+    const updatedNotes = savedNotes.filter((note) => note.id !== noteId);
+  
+    setSavedNotes(updatedNotes);
+    localStorage.setItem("documind_saved_notes", JSON.stringify(updatedNotes));
+  };
+
   return (
     <div className="app">
       <header className="hero">
@@ -318,6 +376,22 @@ function App() {
           citations.
         </p>
       </header>
+
+      <main className="dashboard-layout">
+      <aside className="left-dashboard-panel">
+        {/* Upload Document */}
+        {/* Uploaded Documents */}
+        {/* Current Document */}
+        {/* AI Document Intelligence */}
+        {/* Document Quiz */}
+        {/* Saved Notes */}
+      </aside>
+
+      <section className="right-chat-panel">
+        {/* Ask a Question */}
+        {/* Chat History */}
+      </section>
+    </main>
 
       <section className="card">
         <h2>Upload Document</h2>
@@ -389,18 +463,33 @@ function App() {
             <strong>Chunks:</strong> {currentDocument.chunks}
           </p>
 
-          <button
-            onClick={handleGenerateIntelligence}
-            disabled={loadingIntelligence}
-          >
-            {loadingIntelligence
-              ? "Generating Overview..."
-              : "Generate Document Overview"}
-          </button>
+          <div className="intelligence-tabs action-tabs">
+            <button
+              className={
+                loadingIntelligence
+                  ? "intelligence-tab action-tab-button active-tab"
+                  : "intelligence-tab action-tab-button"
+              }
+              onClick={handleGenerateIntelligence}
+              disabled={loadingIntelligence}
+            >
+              {loadingIntelligence
+                ? "Generating Overview..."
+                : "Generate Document Overview"}
+            </button>
 
-          <button onClick={handleGenerateQuiz} disabled={loadingQuiz}>
-            {loadingQuiz ? "Generating Quiz..." : "Generate Study Quiz"}
-          </button>
+            <button
+              className={
+                loadingQuiz
+                  ? "intelligence-tab action-tab-button active-tab"
+                  : "intelligence-tab action-tab-button"
+              }
+              onClick={handleGenerateQuiz}
+              disabled={loadingQuiz}
+            >
+              {loadingQuiz ? "Generating Quiz..." : "Generate Study Quiz"}
+            </button>
+          </div>
         </section>
       )}
 
@@ -767,32 +856,64 @@ function App() {
                   {chat?.answer || "Answer unavailable."}
                 </p>
 
+                <button
+                  className="secondary-button save-note-button"
+                  onClick={() => saveNote(chat)}
+                >
+                  Save Note
+                </button>
+
                 {Array.isArray(chat?.sources) && chat.sources.length > 0 && (
-                  <div className="chat-sources">
+                  <div className="source-panel">
                     <h3>Sources</h3>
 
-                    {chat.sources.map((source, sourceIndex) => (
-                      <div key={sourceIndex} className="source">
-                        {source?.url ? (
-                          <a
-                            className="citation-title citation-link"
-                            href={source.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {source?.source || "Source"} — Page{" "}
-                            {source?.page || "Unknown"}
-                          </a>
-                        ) : (
-                          <p className="citation-title">
-                            {source?.source || "Source"} — Page{" "}
-                            {source?.page || "Unknown"}
-                          </p>
-                        )}
+                    <div className="intelligence-tabs source-tabs">
+                      {chat.sources.map((source, sourceIndex) => {
+                        const activeSourceIndex = activeChatSources[index] ?? 0;
 
-                        <p>{source?.preview || "No preview available."}...</p>
-                      </div>
-                    ))}
+                        return (
+                          <button
+                            key={sourceIndex}
+                            className={
+                              activeSourceIndex === sourceIndex
+                                ? "intelligence-tab active-tab"
+                                : "intelligence-tab"
+                            }
+                            onClick={() => setActiveChatSource(index, sourceIndex)}
+                          >
+                            Source {sourceIndex + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {(() => {
+                      const activeSourceIndex = activeChatSources[index] ?? 0;
+                      const source = chat.sources[activeSourceIndex];
+
+                      if (!source) return null;
+
+                      return (
+                        <div className="source-card-panel">
+                          {source?.url ? (
+                            <a
+                              className="citation-title citation-link"
+                              href={source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {cleanSourceName(source?.source)} — Page {source?.page || "Unknown"}
+                            </a>
+                          ) : (
+                            <p className="citation-title">
+                              {cleanSourceName(source?.source)} — Page {source?.page || "Unknown"}
+                            </p>
+                          )}
+
+                          <p>{source?.preview || "No preview available."}...</p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -800,6 +921,54 @@ function App() {
           ))}
         </section>
       )}
+
+      {Array.isArray(savedNotes) && savedNotes.length > 0 && (
+        <section className="card saved-notes-card">
+          <div className="saved-notes-header">
+            <p className="section-eyebrow">Knowledge Retention</p>
+            <h2>Saved Notes</h2>
+            <p className="intelligence-subtitle">
+              Review important answers, source-backed explanations, and key insights
+              you saved from your documents.
+            </p>
+          </div>
+
+          <div className="saved-notes-list">
+            {savedNotes.map((note) => (
+              <div key={note.id} className="saved-note">
+                <div className="saved-note-top">
+                  <div>
+                    <p className="saved-note-document">{note.documentName}</p>
+                    <p className="saved-note-date">{note.createdAt}</p>
+                  </div>
+
+                  <button
+                    className="danger-button delete-note-button"
+                    onClick={() => deleteNote(note.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+
+                <div className="saved-note-content">
+                  <div className="note-section-block">
+                    <p className="saved-note-label">Question</p>
+                    <p className="saved-note-question">{note.question}</p>
+                  </div>
+
+                  <div className="note-section-block">
+                    <p className="saved-note-label">Answer</p>
+                    <p className="saved-note-answer">{note.answer}</p>
+                  </div>
+                </div>
+
+               
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
     </div>
   );
 }
