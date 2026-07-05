@@ -8,6 +8,11 @@ import {
   getDocumentQuiz,
 } from "./api";
 import { supabase } from "./supabaseClient";
+import {
+  getSavedNotes,
+  createSavedNote,
+  removeSavedNote,
+} from "./notesService";
 import "./styles.css";
 
 function App() {
@@ -71,13 +76,21 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setSavedNotes([]);
-      return;
-    }
-
-    const storedNotes = localStorage.getItem(`documind_saved_notes_${user.id}`);
-    setSavedNotes(storedNotes ? JSON.parse(storedNotes) : []);
+    const loadSavedNotes = async () => {
+      if (!user) {
+        setSavedNotes([]);
+        return;
+      }
+  
+      try {
+        const notes = await getSavedNotes(user.id);
+        setSavedNotes(notes);
+      } catch (error) {
+        console.error("LOAD SAVED NOTES ERROR:", error);
+      }
+    };
+  
+    loadSavedNotes();
   }, [user]);
 
   const handleSignUp = async () => {
@@ -431,43 +444,41 @@ function App() {
     }
   };
 
-  const saveNote = (chat) => {
+  const saveNote = async (chat) => {
     if (!user) {
       return;
     }
-
-    const newNote = {
-      id: Date.now(),
-      question: chat.question,
-      answer: chat.answer,
-      sources: chat.sources || [],
-      documentName: currentDocument?.filename || "Unknown document",
-      createdAt: new Date().toLocaleString(),
-    };
-
-    const updatedNotes = [newNote, ...savedNotes];
-
-    setSavedNotes(updatedNotes);
-    localStorage.setItem(
-      `documind_saved_notes_${user.id}`,
-      JSON.stringify(updatedNotes)
-    );
+  
+    try {
+      const newNote = await createSavedNote({
+        userId: user.id,
+        documentId: currentDocument?.document_id || selectedDocumentId || null,
+        documentName: currentDocument?.filename || "Unknown document",
+        question: chat.question,
+        answer: chat.answer,
+      });
+  
+      setSavedNotes((prevNotes) => [newNote, ...prevNotes]);
+    } catch (error) {
+      console.error("SAVE NOTE ERROR:", error);
+    }
   };
 
-  const deleteNote = (noteId) => {
+  const deleteNote = async (noteId) => {
     if (!user) {
       return;
     }
-
-    const updatedNotes = savedNotes.filter((note) => note.id !== noteId);
-
-    setSavedNotes(updatedNotes);
-    localStorage.setItem(
-      `documind_saved_notes_${user.id}`,
-      JSON.stringify(updatedNotes)
-    );
+  
+    try {
+      await removeSavedNote(noteId);
+  
+      setSavedNotes((prevNotes) =>
+        prevNotes.filter((note) => note.id !== noteId)
+      );
+    } catch (error) {
+      console.error("DELETE NOTE ERROR:", error);
+    }
   };
-
   if (loadingAuth) {
     return (
       <div className="app">
@@ -1089,8 +1100,10 @@ function App() {
               <div key={note.id} className="saved-note">
                 <div className="saved-note-top">
                   <div>
-                    <p className="saved-note-document">{note.documentName}</p>
-                    <p className="saved-note-date">{note.createdAt}</p>
+                  <p className="saved-note-document">{note.document_name}</p>
+                  <p className="saved-note-date">
+                    {new Date(note.created_at).toLocaleString()}
+                  </p>
                   </div>
 
                   <button
