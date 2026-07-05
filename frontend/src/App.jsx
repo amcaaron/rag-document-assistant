@@ -242,7 +242,7 @@ function App() {
     setUploadMessage("Uploading and indexing document...");
 
     try {
-      const data = await uploadDocument(file);
+      const data = await uploadDocument(file, user?.id);
       console.log("FRONTEND UPLOAD RESPONSE:", data);
 
       setUploadMessage(data.message || "Document uploaded successfully.");
@@ -263,6 +263,8 @@ function App() {
           filename: data.filename || file.name,
           pagesLoaded: data.pages_loaded || 0,
           chunksCreated: data.chunks_created || 0,
+          storagePath: data.storage_path || null,
+          storageUrl: data.storage_url || null,
         });
       
         setDocuments((prevDocuments) => [savedDocument, ...prevDocuments]);

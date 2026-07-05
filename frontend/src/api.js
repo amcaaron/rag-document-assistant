@@ -3,18 +3,23 @@ import axios from "axios";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
-export const uploadDocument = async (file) => {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await axios.post(`${API_BASE_URL}/documents/upload`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-
-  return response.data;
-};
+  export const uploadDocument = async (file, userId) => {
+    const formData = new FormData();
+  
+    formData.append("file", file);
+  
+    if (userId) {
+      formData.append("user_id", userId);
+    }
+  
+    const response = await axios.post(`${API_BASE_URL}/documents/upload`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  
+    return response.data;
+  };
 
 export const getDocuments = async () => {
   const response = await axios.get(`${API_BASE_URL}/documents/`);

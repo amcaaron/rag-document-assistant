@@ -15,32 +15,36 @@ export const getUserDocuments = async (userId) => {
 };
 
 export const createUserDocument = async ({
-  userId,
-  documentId,
-  filename,
-  pagesLoaded,
-  chunksCreated,
-}) => {
-  const { data, error } = await supabase
-    .from("documents")
-    .insert([
-      {
-        user_id: userId,
-        document_id: documentId,
-        filename,
-        pages_loaded: pagesLoaded,
-        chunks_created: chunksCreated,
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
-};
+    userId,
+    documentId,
+    filename,
+    pagesLoaded,
+    chunksCreated,
+    storagePath,
+    storageUrl,
+  }) => {
+    const { data, error } = await supabase
+      .from("documents")
+      .insert([
+        {
+          user_id: userId,
+          document_id: documentId,
+          filename,
+          pages_loaded: pagesLoaded,
+          chunks_created: chunksCreated,
+          storage_path: storagePath,
+          storage_url: storageUrl,
+        },
+      ])
+      .select()
+      .single();
+  
+    if (error) {
+      throw error;
+    }
+  
+    return data;
+  };
 
 export const removeUserDocument = async (documentId) => {
   const { error } = await supabase
