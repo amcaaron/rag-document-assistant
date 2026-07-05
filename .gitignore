@@ -40,3 +40,5 @@ yarn-error.log*
 .idea/
 backend/documents.json
 documents.json
+
+.pytest_cache/
