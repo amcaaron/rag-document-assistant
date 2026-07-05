@@ -1,44 +1,52 @@
-import os
 from langchain_openai import ChatOpenAI
-from app.services.vector_service import get_vectorstore
+
+from app.services.pgvector_service import search_chunks_in_pgvector
 
 
-def answer_question(question: str, document_id: str):
-    vectorstore = get_vectorstore()
-
-    retriever = vectorstore.as_retriever(
-        search_kwargs={
-            "k": 8,
-            "filter": {
-                "document_id": document_id
-            }
+def answer_question(question: str, document_id: str, user_id: str):
+    if not user_id:
+        return {
+            "answer": "User authentication is required to search this document.",
+            "sources": [],
         }
+
+    docs = search_chunks_in_pgvector(
+        question=question,
+        user_id=user_id,
+        document_id=document_id,
+        match_count=8,
     )
 
-    docs = retriever.invoke(question)
+    if not docs:
+        return {
+            "answer": "I could not find that information in the uploaded document.",
+            "sources": [],
+        }
 
-    context = "\n\n".join([doc.page_content for doc in docs])
+    context = "\n\n".join([doc.get("content", "") for doc in docs])
 
     sources = []
 
     for doc in docs:
-        source_path = doc.metadata.get("source", "Unknown")
-        filename = os.path.basename(source_path)
-        page = doc.metadata.get("page", 1)
+        filename = doc.get("filename", "Unknown")
+        page = doc.get("page") or "Unknown"
+        storage_url = doc.get("storage_url")
+        content = doc.get("content", "")
 
-        file_url = f"http://127.0.0.1:8000/uploads/{filename}"
-
-        if filename.lower().endswith(".pdf"):
-            citation_url = f"{file_url}#page={page}"
+        if storage_url and filename.lower().endswith(".pdf") and page != "Unknown":
+            citation_url = f"{storage_url}#page={page}"
         else:
-            citation_url = file_url
+            citation_url = storage_url
 
-        sources.append({
-            "source": filename,
-            "page": page,
-            "preview": doc.page_content[:250],
-            "url": citation_url
-        })
+        sources.append(
+            {
+                "source": filename,
+                "page": page,
+                "preview": content[:250],
+                "url": citation_url,
+                "similarity": doc.get("similarity"),
+            }
+        )
 
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
@@ -66,5 +74,5 @@ Answer:
 
     return {
         "answer": response.content,
-        "sources": sources
+        "sources": sources,
     }

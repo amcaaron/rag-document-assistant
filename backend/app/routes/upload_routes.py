@@ -131,12 +131,33 @@ def upload_document(
 
         print("13. Metadata added successfully")
 
-        print("14. Storing chunks in ChromaDB...")
+        print("14. Storing chunks in local ChromaDB...")
         store_documents(chunks)
 
-        print("15. Chunks stored successfully in ChromaDB")
+        print("15. Chunks stored successfully in local ChromaDB")
 
-        print("16. Adding document to registry...")
+        if user_id:
+            print("16. Storing chunks in Supabase pgvector...")
+
+            pgvector_chunks_created = store_chunks_in_pgvector(
+                chunks=chunks,
+                user_id=user_id,
+                document_id=document_id,
+                filename=file.filename,
+                stored_filename=safe_filename,
+                storage_path=storage_path,
+                storage_url=storage_url,
+            )
+
+            print(
+                f"17. Chunks stored successfully in Supabase pgvector: "
+                f"{pgvector_chunks_created}"
+            )
+        else:
+            pgvector_chunks_created = 0
+            print("16. No user_id provided. Skipping Supabase pgvector storage.")
+
+        print("18. Adding document to registry...")
 
         document_data = {
             "document_id": document_id,
@@ -144,14 +165,15 @@ def upload_document(
             "stored_filename": safe_filename,
             "pages_loaded": len(documents),
             "chunks_created": len(chunks),
+            "pgvector_chunks_created": pgvector_chunks_created,
             "storage_path": storage_path,
             "storage_url": storage_url,
         }
 
         add_document(document_data)
 
-        print("17. Document added to registry")
-        print("18. Upload route completed successfully\n")
+        print("19. Document added to registry")
+        print("20. Upload route completed successfully\n")
 
         return {
             "message": "Document uploaded, indexed, and stored successfully",
@@ -160,6 +182,7 @@ def upload_document(
             "stored_filename": safe_filename,
             "pages_loaded": len(documents),
             "chunks_created": len(chunks),
+            "pgvector_chunks_created": pgvector_chunks_created,
             "storage_path": storage_path,
             "storage_url": storage_url,
         }
@@ -209,6 +232,11 @@ def clear_all_documents():
 
         print("3. Clearing ChromaDB vectorstore...")
         clear_vectorstore()
+        if documents:
+            for document in documents:
+                document_id = document.get("document_id")
+                if document_id:
+                    delete_document_chunks_from_pgvector(document_id)
 
         print("4. Clearing document registry...")
         clear_documents()
@@ -259,7 +287,7 @@ def delete_uploaded_document(document_id: str):
             print("2. Document not found in registry, continuing cleanup")
 
         print("3. Deleting document vectors...")
-        delete_document_vectors(document_id)
+        delete_document_chunks_from_pgvector(document_id)
 
         print("4. Deleting document from registry...")
         delete_document(document_id)
@@ -280,3 +308,9 @@ def delete_uploaded_document(document_id: str):
             status_code=500,
             detail=f"Failed to delete document: {str(error)}",
         )
+    
+from app.services.pgvector_service import (
+    store_chunks_in_pgvector,
+    delete_document_chunks_from_pgvector,
+    clear_user_chunks_from_pgvector,
+)

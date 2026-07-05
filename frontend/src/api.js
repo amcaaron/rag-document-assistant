@@ -26,10 +26,11 @@ export const getDocuments = async () => {
   return response.data;
 };
 
-export const askQuestion = async (question, documentId) => {
+export const askQuestion = async (question, documentId, userId) => {
   const response = await axios.post(`${API_BASE_URL}/chat/ask`, {
     question,
     document_id: documentId,
+    user_id: userId,
   });
 
   return response.data;

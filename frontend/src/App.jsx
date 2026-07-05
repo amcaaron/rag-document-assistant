@@ -393,7 +393,7 @@ function App() {
     setSources([]);
 
     try {
-      const data = await askQuestion(userQuestion, selectedDocumentId);
+      const data = await askQuestion(userQuestion, selectedDocumentId, user?.id);
 
       const safeAnswer =
         typeof data.answer === "string"
