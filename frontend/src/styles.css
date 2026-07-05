@@ -1002,6 +1002,35 @@ textarea::placeholder {
   padding: 10px 16px;
 }
 
+.document-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.document-actions button {
+  margin-top: 0;
+}
+
+.document-delete-button {
+  margin: 0;
+  padding: 15px 22px;
+}
+
+@media (max-width: 720px) {
+  .document-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .document-actions button {
+    flex: 1;
+    width: 100%;
+  }
+}
+
 /* RESPONSIVE */
 
 @media (max-width: 720px) {

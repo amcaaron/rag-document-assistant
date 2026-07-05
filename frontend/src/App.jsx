@@ -3,6 +3,7 @@ import {
   uploadDocument,
   getDocuments,
   askQuestion,
+  deleteDocument,
   clearAllDocuments,
   getDocumentIntelligence,
   getDocumentQuiz,
@@ -16,6 +17,7 @@ import {
 import {
   getUserDocuments,
   createUserDocument,
+  removeUserDocument,
   removeAllUserDocuments,
 } from "./documentService";
 import "./styles.css";
@@ -322,6 +324,54 @@ function App() {
     setUploadMessage(`Selected document: ${selected.filename}`);
   };
 
+  const handleDeleteDocument = async (documentId) => {
+    if (!documentId || !user) {
+      return;
+    }
+  
+    const confirmDelete = window.confirm(
+      "Delete this document? This will remove it from your document list and backend index."
+    );
+  
+    if (!confirmDelete) {
+      return;
+    }
+  
+    try {
+      await deleteDocument(documentId);
+      await removeUserDocument(documentId);
+  
+      setDocuments((prevDocuments) =>
+        prevDocuments.filter((doc) => doc.document_id !== documentId)
+      );
+  
+      if (selectedDocumentId === documentId) {
+        setSelectedDocumentId("");
+        setCurrentDocument(null);
+        setQuestion("");
+        setAnswer("");
+        setSources([]);
+        setChatHistory([]);
+        setDocumentIntelligence(null);
+        setDocumentQuiz(null);
+        setShowQuizAnswers({});
+        setActiveQuizPanel("multiple_choice");
+        setActiveMultipleChoiceQuestion(0);
+        setActiveShortAnswerQuestion(0);
+      }
+  
+      setUploadMessage("Document deleted successfully.");
+    } catch (error) {
+      console.error("DELETE DOCUMENT ERROR:", error);
+  
+      setUploadMessage(
+        error.response?.data?.detail ||
+          error.message ||
+          "Something went wrong while deleting the document."
+      );
+    }
+  };
+
   const handleAsk = async () => {
     if (!selectedDocumentId) {
       setAnswer("Please upload or select a document before asking a question.");
@@ -625,12 +675,22 @@ function App() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => handleSelectDocument(doc?.document_id)}
-                  disabled={!doc?.document_id}
-                >
-                  Select
-                </button>
+                <div className="document-actions">
+                  <button
+                    onClick={() => handleSelectDocument(doc?.document_id)}
+                    disabled={!doc?.document_id}
+                  >
+                    Select
+                  </button>
+
+                  <button
+                    className="danger-button document-delete-button"
+                    onClick={() => handleDeleteDocument(doc?.document_id)}
+                    disabled={!doc?.document_id}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -30,11 +30,6 @@ export const askQuestion = async (question, documentId) => {
   return response.data;
 };
 
-export const deleteDocument = async (documentId) => {
-  const response = await axios.delete(`${API_BASE_URL}/documents/${documentId}`);
-  return response.data;
-};
-
 export const clearAllDocuments = async () => {
   const response = await axios.delete(`${API_BASE_URL}/documents/clear/all`);
   return response.data;
@@ -77,5 +72,10 @@ export const getDocumentQuiz = async (documentId) => {
     `${API_BASE_URL}/documents/${documentId}/quiz`
   );
 
+  return response.data;
+};
+
+export const deleteDocument = async (documentId) => {
+  const response = await axios.delete(`${API_BASE_URL}/documents/${documentId}`);
   return response.data;
 };
