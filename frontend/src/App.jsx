@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   uploadDocument,
   getDocuments,
@@ -7,6 +7,7 @@ import {
   getDocumentIntelligence,
   getDocumentQuiz,
 } from "./api";
+import { supabase } from "./supabaseClient";
 import "./styles.css";
 
 function App() {
@@ -34,32 +35,125 @@ function App() {
   const [activeShortAnswerQuestion, setActiveShortAnswerQuestion] = useState(0);
 
   const [activeChatSources, setActiveChatSources] = useState({});
-  const [activeSavedNoteSources, setActiveSavedNoteSources] = useState({});
+
+  const [user, setUser] = useState(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  const [savedNotes, setSavedNotes] = useState([]);
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error("SESSION ERROR:", error);
+      }
+
+      setUser(data.session?.user || null);
+      setLoadingAuth(false);
+    };
+
+    getSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      setLoadingAuth(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setSavedNotes([]);
+      return;
+    }
+
+    const storedNotes = localStorage.getItem(`documind_saved_notes_${user.id}`);
+    setSavedNotes(storedNotes ? JSON.parse(storedNotes) : []);
+  }, [user]);
+
+  const handleSignUp = async () => {
+    setAuthMessage("");
+
+    if (!authEmail || !authPassword) {
+      setAuthMessage("Please enter an email and password.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signUp({
+      email: authEmail,
+      password: authPassword,
+    });
+
+    if (error) {
+      setAuthMessage(error.message);
+      return;
+    }
+
+    setAuthMessage("Account created. Check your email if confirmation is required.");
+  };
+
+  const handleLogin = async () => {
+    setAuthMessage("");
+
+    if (!authEmail || !authPassword) {
+      setAuthMessage("Please enter an email and password.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: authEmail,
+      password: authPassword,
+    });
+
+    if (error) {
+      setAuthMessage(error.message);
+      return;
+    }
+
+    setAuthMessage("Logged in successfully.");
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+
+    setUser(null);
+    setAuthEmail("");
+    setAuthPassword("");
+    setQuestion("");
+    setAnswer("");
+    setSources([]);
+    setChatHistory([]);
+    setDocuments([]);
+    setCurrentDocument(null);
+    setSelectedDocumentId("");
+    setDocumentIntelligence(null);
+    setDocumentQuiz(null);
+    setSavedNotes([]);
+    setFile(null);
+    setUploadMessage("");
+  };
 
   const cleanSourceName = (sourceName) => {
     if (!sourceName) {
       return "Source";
     }
-  
-    // Removes UUID prefix like:
-    // 7321e15f-24a0-4df9-90db-d2d9e93af3b1_filename.pdf
-    return sourceName.replace(
-      /^[0-9a-fA-F-]{36}_/,
-      ""
-    );
+
+    return sourceName.replace(/^[0-9a-fA-F-]{36}_/, "");
   };
 
   const setActiveChatSource = (chatIndex, sourceIndex) => {
     setActiveChatSources((prevSources) => ({
       ...prevSources,
       [chatIndex]: sourceIndex,
-    }));
-  };
-  
-  const setActiveSavedNoteSource = (noteId, sourceIndex) => {
-    setActiveSavedNoteSources((prevSources) => ({
-      ...prevSources,
-      [noteId]: sourceIndex,
     }));
   };
 
@@ -337,12 +431,11 @@ function App() {
     }
   };
 
-  const [savedNotes, setSavedNotes] = useState(() => {
-    const storedNotes = localStorage.getItem("documind_saved_notes");
-    return storedNotes ? JSON.parse(storedNotes) : [];
-  });
-
   const saveNote = (chat) => {
+    if (!user) {
+      return;
+    }
+
     const newNote = {
       id: Date.now(),
       question: chat.question,
@@ -351,23 +444,95 @@ function App() {
       documentName: currentDocument?.filename || "Unknown document",
       createdAt: new Date().toLocaleString(),
     };
-  
+
     const updatedNotes = [newNote, ...savedNotes];
-  
+
     setSavedNotes(updatedNotes);
-    localStorage.setItem("documind_saved_notes", JSON.stringify(updatedNotes));
+    localStorage.setItem(
+      `documind_saved_notes_${user.id}`,
+      JSON.stringify(updatedNotes)
+    );
   };
-  
+
   const deleteNote = (noteId) => {
+    if (!user) {
+      return;
+    }
+
     const updatedNotes = savedNotes.filter((note) => note.id !== noteId);
-  
+
     setSavedNotes(updatedNotes);
-    localStorage.setItem("documind_saved_notes", JSON.stringify(updatedNotes));
+    localStorage.setItem(
+      `documind_saved_notes_${user.id}`,
+      JSON.stringify(updatedNotes)
+    );
   };
+
+  if (loadingAuth) {
+    return (
+      <div className="app">
+        <section className="card auth-card">
+          <h2>Loading DocuMind AI...</h2>
+        </section>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="app">
+        <header className="hero">
+          <p className="badge">RAG Personal Document Assistant</p>
+          <h1>DocuMind AI</h1>
+          <p>
+            Sign in to upload documents, ask source-cited questions, generate AI
+            study tools, and save important notes.
+          </p>
+        </header>
+
+        <section className="card auth-card">
+          <h2>Sign in to continue</h2>
+
+          <div className="auth-form">
+            <input
+              type="email"
+              placeholder="Email address"
+              value={authEmail}
+              onChange={(e) => setAuthEmail(e.target.value)}
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={authPassword}
+              onChange={(e) => setAuthPassword(e.target.value)}
+            />
+
+            <div className="button-row">
+              <button onClick={handleLogin}>Log In</button>
+              <button className="secondary-button" onClick={handleSignUp}>
+                Sign Up
+              </button>
+            </div>
+
+            {authMessage && <p className="message">{authMessage}</p>}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
       <header className="hero">
+        <div className="user-bar">
+          <p>Signed in as {user.email}</p>
+
+          <button className="secondary-button logout-button" onClick={handleLogout}>
+            Log Out
+          </button>
+        </div>
+
         <p className="badge">RAG Personal Document Assistant</p>
         <h1>DocuMind AI</h1>
         <p>
@@ -376,22 +541,6 @@ function App() {
           citations.
         </p>
       </header>
-
-      <main className="dashboard-layout">
-      <aside className="left-dashboard-panel">
-        {/* Upload Document */}
-        {/* Uploaded Documents */}
-        {/* Current Document */}
-        {/* AI Document Intelligence */}
-        {/* Document Quiz */}
-        {/* Saved Notes */}
-      </aside>
-
-      <section className="right-chat-panel">
-        {/* Ask a Question */}
-        {/* Chat History */}
-      </section>
-    </main>
 
       <section className="card">
         <h2>Upload Document</h2>
@@ -575,11 +724,9 @@ function App() {
                 <div className="intelligence-content">
                   <h3>Key Takeaways</h3>
                   <ul className="clean-list">
-                    {documentIntelligence.key_takeaways.map(
-                      (takeaway, index) => (
-                        <li key={index}>{takeaway}</li>
-                      )
-                    )}
+                    {documentIntelligence.key_takeaways.map((takeaway, index) => (
+                      <li key={index}>{takeaway}</li>
+                    ))}
                   </ul>
                 </div>
               )}
@@ -879,7 +1026,9 @@ function App() {
                                 ? "intelligence-tab active-tab"
                                 : "intelligence-tab"
                             }
-                            onClick={() => setActiveChatSource(index, sourceIndex)}
+                            onClick={() =>
+                              setActiveChatSource(index, sourceIndex)
+                            }
                           >
                             Source {sourceIndex + 1}
                           </button>
@@ -902,11 +1051,13 @@ function App() {
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              {cleanSourceName(source?.source)} — Page {source?.page || "Unknown"}
+                              {cleanSourceName(source?.source)} — Page{" "}
+                              {source?.page || "Unknown"}
                             </a>
                           ) : (
                             <p className="citation-title">
-                              {cleanSourceName(source?.source)} — Page {source?.page || "Unknown"}
+                              {cleanSourceName(source?.source)} — Page{" "}
+                              {source?.page || "Unknown"}
                             </p>
                           )}
 
@@ -928,8 +1079,8 @@ function App() {
             <p className="section-eyebrow">Knowledge Retention</p>
             <h2>Saved Notes</h2>
             <p className="intelligence-subtitle">
-              Review important answers, source-backed explanations, and key insights
-              you saved from your documents.
+              Review important answers and key insights you saved from your
+              documents.
             </p>
           </div>
 
@@ -961,17 +1112,13 @@ function App() {
                     <p className="saved-note-answer">{note.answer}</p>
                   </div>
                 </div>
-
-               
               </div>
             ))}
           </div>
         </section>
       )}
-
     </div>
   );
 }
-
 
 export default App;
