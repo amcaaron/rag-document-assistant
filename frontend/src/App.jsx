@@ -13,6 +13,11 @@ import {
   createSavedNote,
   removeSavedNote,
 } from "./notesService";
+import {
+  getUserDocuments,
+  createUserDocument,
+  removeAllUserDocuments,
+} from "./documentService";
 import "./styles.css";
 
 function App() {
@@ -91,6 +96,26 @@ function App() {
     };
   
     loadSavedNotes();
+  }, [user]);
+
+  useEffect(() => {
+    const loadUserDocuments = async () => {
+      if (!user) {
+        setDocuments([]);
+        setCurrentDocument(null);
+        setSelectedDocumentId("");
+        return;
+      }
+  
+      try {
+        const userDocuments = await getUserDocuments(user.id);
+        setDocuments(userDocuments);
+      } catch (error) {
+        console.error("LOAD USER DOCUMENTS ERROR:", error);
+      }
+    };
+  
+    loadUserDocuments();
   }, [user]);
 
   const handleSignUp = async () => {
@@ -229,14 +254,17 @@ function App() {
 
       setSelectedDocumentId(data.document_id || "");
 
-      setDocuments([
-        {
-          document_id: data.document_id,
+      if (user) {
+        const savedDocument = await createUserDocument({
+          userId: user.id,
+          documentId: data.document_id,
           filename: data.filename || file.name,
-          pages_loaded: data.pages_loaded || 0,
-          chunks_created: data.chunks_created || 0,
-        },
-      ]);
+          pagesLoaded: data.pages_loaded || 0,
+          chunksCreated: data.chunks_created || 0,
+        });
+      
+        setDocuments((prevDocuments) => [savedDocument, ...prevDocuments]);
+      }
 
       setQuestion("");
       setAnswer("");
@@ -360,6 +388,10 @@ function App() {
   const handleClearAllDocuments = async () => {
     try {
       const data = await clearAllDocuments();
+
+      if (user) {
+        await removeAllUserDocuments(user.id);
+      }
 
       setDocuments([]);
       setCurrentDocument(null);
