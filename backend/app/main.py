@@ -34,3 +34,7 @@ app.include_router(quiz_router)
 @app.get("/")
 def home():
     return {"message": "DocuMind AI backend is running"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
