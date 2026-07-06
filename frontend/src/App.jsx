@@ -197,10 +197,12 @@ function App() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-
+  
     setUser(null);
     setAuthEmail("");
     setAuthPassword("");
+    setAuthMessage("Logged out successfully.");
+  
     setQuestion("");
     setAnswer("");
     setSources([]);
@@ -689,13 +691,19 @@ function App() {
   return (
     <div className="app">
       <header className="hero">
-        <div className="user-bar">
-          <p>Signed in as {user.email}</p>
+      <div className="user-bar">
+        <div className="user-account-pill">
+          <div className="user-avatar">
+            {user.email?.charAt(0).toUpperCase()}
+          </div>
 
-          <button className="secondary-button logout-button" onClick={handleLogout}>
-            Log Out
-          </button>
+          <p className="user-email-line">Signed in as {user.email}</p>
         </div>
+
+        <button className="secondary-button logout-button" onClick={handleLogout}>
+          Log Out
+        </button>
+      </div>
 
         <p className="badge">RAG Personal Document Assistant</p>
         <h1>DocuMind AI</h1>
