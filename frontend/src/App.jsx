@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   uploadDocument,
-  getDocuments,
   askQuestion,
   deleteDocument,
   clearAllDocuments,
@@ -258,15 +257,6 @@ function App() {
     }));
   };
 
-  const loadDocuments = async () => {
-    try {
-      const data = await getDocuments();
-      setDocuments(data.documents || []);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   const handleUpload = async () => {
     if (!file) {
       setUploadMessage("Please select a document first.");
@@ -287,6 +277,8 @@ function App() {
         filename: data.filename || file.name,
         pages: data.pages_loaded || 0,
         chunks: data.chunks_created || 0,
+        storage_path: data.storage_path || null,
+        storage_url: data.storage_url || null,
       });
 
       setSelectedDocumentId(data.document_id || "");
@@ -346,6 +338,8 @@ function App() {
       filename: selected.filename || "Untitled document",
       pages: selected.pages_loaded || 0,
       chunks: selected.chunks_created || 0,
+      storage_path: selected.storage_path || null,
+      storage_url: selected.storage_url || null,
     });
 
     setQuestion("");
@@ -376,6 +370,7 @@ function App() {
   
     try {
       await deleteDocument(documentId);
+      await removeUserDocument(documentId);
       await clearChatHistoryForDocument(user.id, documentId);
   
       setDocuments((prevDocuments) =>
@@ -408,6 +403,22 @@ function App() {
       );
     }
   };
+
+  const getFileExtension = (filename) => {
+    if (!filename) {
+      return "";
+    }
+  
+    return filename.split(".").pop().toLowerCase();
+  };
+  
+  const isPdfDocument = currentDocument
+    ? getFileExtension(currentDocument.filename) === "pdf"
+    : false;
+  
+  const isTextDocument = currentDocument
+    ? getFileExtension(currentDocument.filename) === "txt"
+    : false;
 
   const handleAsk = async () => {
     if (!selectedDocumentId) {
@@ -690,32 +701,31 @@ function App() {
 
   return (
     <div className="app">
-      <header className="hero">
-      <div className="user-bar">
-        <div className="user-account-pill">
-          <div className="user-avatar">
-            {user.email?.charAt(0).toUpperCase()}
-          </div>
-
-          <p className="user-email-line">Signed in as {user.email}</p>
+      <header className="workspace-topbar">
+        <div>
+          <p className="workspace-kicker">RAG Personal Document Assistant</p>
+          <h1 className="workspace-logo">DocuMind AI</h1>
         </div>
 
-        <button className="secondary-button logout-button" onClick={handleLogout}>
-          Log Out
-        </button>
-      </div>
+        <div className="workspace-account-actions">
+          <div className="user-account-pill">
+            <div className="user-avatar">
+              {user.email?.charAt(0).toUpperCase()}
+            </div>
 
-        <p className="badge">RAG Personal Document Assistant</p>
-        <h1>DocuMind AI</h1>
-        <p>
-          Upload your personal PDFs, DOCX, or TXT files and ask intelligent
-          questions with semantic search, OpenAI, ChromaDB, and clickable source
-          citations.
-        </p>
+            <p className="user-email-line">Signed in as {user.email}</p>
+          </div>
+
+          <button className="secondary-button logout-button" onClick={handleLogout}>
+            Log Out
+          </button>
+        </div>
       </header>
 
-      <section className="card">
-        <h2>Upload Document</h2>
+      <main className="workspace-layout">
+        <section className="workspace-left">
+          <section className="card">
+            <h2>Upload Document</h2>
 
         <input
           type="file"
@@ -1301,6 +1311,75 @@ function App() {
           </div>
         </section>
       )}
+        </section>
+
+        <aside className="workspace-right">
+          <div className="document-preview-card">
+            <div className="document-preview-header">
+              <p className="section-eyebrow">Document Preview</p>
+              <h2>Uploaded File</h2>
+
+              {currentDocument && (
+                <p className="document-preview-name">
+                  {currentDocument.filename}
+                </p>
+              )}
+            </div>
+
+            {!currentDocument && (
+              <div className="empty-preview-state">
+                <p>No document selected yet.</p>
+                <span>Upload or select a document to preview it here.</span>
+              </div>
+            )}
+
+            {currentDocument && !currentDocument.storage_url && (
+              <div className="empty-preview-state">
+                <p>Preview unavailable.</p>
+                <span>This document does not have a storage URL yet.</span>
+              </div>
+            )}
+
+            {currentDocument && currentDocument.storage_url && isPdfDocument && (
+              <iframe
+                className="pdf-preview-frame"
+                src={currentDocument.storage_url}
+                title={`Preview of ${currentDocument.filename}`}
+              />
+            )}
+
+            {currentDocument && currentDocument.storage_url && isTextDocument && (
+              <iframe
+                className="pdf-preview-frame"
+                src={currentDocument.storage_url}
+                title={`Preview of ${currentDocument.filename}`}
+              />
+            )}
+
+            {currentDocument &&
+              currentDocument.storage_url &&
+              !isPdfDocument &&
+              !isTextDocument && (
+                <div className="empty-preview-state">
+                  <p>Preview not available for this file type.</p>
+                  <span>
+                    DOCX files usually cannot be previewed directly in the
+                    browser, but you can still ask questions from the document.
+                  </span>
+
+                  <a
+                    className="document-open-link"
+                    href={currentDocument.storage_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open File
+                  </a>
+                </div>
+              )}
+          </div>
+        </aside>
+      </main>
     </div>
   );
 }
