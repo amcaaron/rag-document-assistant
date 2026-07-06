@@ -20,6 +20,12 @@ import {
   removeUserDocument,
   removeAllUserDocuments,
 } from "./documentService";
+import {
+  getChatHistory,
+  createChatHistoryEntry,
+  clearChatHistoryForDocument,
+  clearAllUserChatHistory,
+} from "./chatHistoryService";
 import "./styles.css";
 
 function App() {
@@ -119,6 +125,33 @@ function App() {
   
     loadUserDocuments();
   }, [user]);
+
+  useEffect(() => {
+    const loadSelectedDocumentChatHistory = async () => {
+      if (!user || !selectedDocumentId) {
+        setChatHistory([]);
+        return;
+      }
+  
+      try {
+        const history = await getChatHistory(user.id, selectedDocumentId);
+  
+        const formattedHistory = history.map((entry) => ({
+          id: entry.id,
+          question: entry.question,
+          answer: entry.answer,
+          sources: Array.isArray(entry.sources) ? entry.sources : [],
+          createdAt: entry.created_at,
+        }));
+  
+        setChatHistory(formattedHistory);
+      } catch (error) {
+        console.error("LOAD CHAT HISTORY ERROR:", error);
+      }
+    };
+  
+    loadSelectedDocumentChatHistory();
+  }, [user, selectedDocumentId]);
 
   const handleSignUp = async () => {
     setAuthMessage("");
@@ -341,7 +374,7 @@ function App() {
   
     try {
       await deleteDocument(documentId);
-      await removeUserDocument(documentId);
+      await clearChatHistoryForDocument(user.id, documentId);
   
       setDocuments((prevDocuments) =>
         prevDocuments.filter((doc) => doc.document_id !== documentId)
@@ -407,10 +440,36 @@ function App() {
         answer: safeAnswer,
         sources: safeSources,
       };
-
-      setChatHistory((prevHistory) => [...prevHistory, newChatEntry]);
+      
+      if (user) {
+        const savedChatEntry = await createChatHistoryEntry({
+          userId: user.id,
+          documentId: selectedDocumentId,
+          documentName: currentDocument?.filename || "Unknown document",
+          question: userQuestion,
+          answer: safeAnswer,
+          sources: safeSources,
+        });
+      
+        setChatHistory((prevHistory) => [
+          ...prevHistory,
+          {
+            id: savedChatEntry.id,
+            question: savedChatEntry.question,
+            answer: savedChatEntry.answer,
+            sources: Array.isArray(savedChatEntry.sources)
+              ? savedChatEntry.sources
+              : [],
+            createdAt: savedChatEntry.created_at,
+          },
+        ]);
+      } else {
+        setChatHistory((prevHistory) => [...prevHistory, newChatEntry]);
+      }
+      
       setAnswer(safeAnswer);
       setSources(safeSources);
+
     } catch (error) {
       const errorMessage =
         error.response?.data?.detail ||
@@ -430,10 +489,19 @@ function App() {
     }
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
     setQuestion("");
     setAnswer("");
     setSources([]);
+
+    if (user && selectedDocumentId) {
+      try {
+        await clearChatHistoryForDocument(user.id, selectedDocumentId);
+      } catch (error) {
+        console.error("CLEAR CHAT HISTORY ERROR:", error);
+      }
+    }
+
     setChatHistory([]);
   };
 
@@ -443,6 +511,7 @@ function App() {
 
       if (user) {
         await removeAllUserDocuments(user.id);
+        await clearAllUserChatHistory(user.id);
       }
 
       setDocuments([]);
