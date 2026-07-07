@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   uploadDocument,
   askQuestion,
@@ -27,6 +27,15 @@ import {
 } from "./chatHistoryService";
 import "./styles.css";
 
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
+
 function App() {
   const [file, setFile] = useState(null);
   const [uploadMessage, setUploadMessage] = useState("");
@@ -35,6 +44,10 @@ function App() {
   const [sources, setSources] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
   const [currentDocument, setCurrentDocument] = useState(null);
+  const [previewPage, setPreviewPage] = useState(1);
+  const [selectedSource, setSelectedSource] = useState(null);
+  const [pdfPageCount, setPdfPageCount] = useState(null);
+  const [pdfScale, setPdfScale] = useState(1.1);
   const [loadingUpload, setLoadingUpload] = useState(false);
   const [loadingAnswer, setLoadingAnswer] = useState(false);
   const [documents, setDocuments] = useState([]);
@@ -60,6 +73,8 @@ function App() {
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   const [savedNotes, setSavedNotes] = useState([]);
+  const pageRefs = useRef({});
+  const pdfViewerRef = useRef(null);
 
   useEffect(() => {
     const getSession = async () => {
@@ -151,6 +166,41 @@ function App() {
   
     loadSelectedDocumentChatHistory();
   }, [user, selectedDocumentId]);
+
+  const handlePdfLoadSuccess = ({ numPages }) => {
+    setPdfPageCount(numPages);
+    setPreviewPage(1);
+    setSelectedSource(null);
+  };
+
+  const handlePdfScroll = () => {
+    const entries = Object.entries(pageRefs.current);
+  
+    if (!entries.length) {
+      return;
+    }
+  
+    let closestPage = previewPage;
+    let closestDistance = Infinity;
+  
+    entries.forEach(([pageNumber, element]) => {
+      if (!element) {
+        return;
+      }
+  
+      const rect = element.getBoundingClientRect();
+      const distance = Math.abs(rect.top - 140);
+  
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestPage = Number(pageNumber);
+      }
+    });
+  
+    if (closestPage !== previewPage) {
+      setPreviewPage(closestPage);
+    }
+  };
 
   const handleSignUp = async () => {
     setAuthMessage("");
@@ -282,6 +332,8 @@ function App() {
       });
 
       setSelectedDocumentId(data.document_id || "");
+      setPreviewPage(1);
+      setSelectedSource(null);
 
       if (user) {
         const savedDocument = await createUserDocument({
@@ -332,6 +384,8 @@ function App() {
     }
 
     setSelectedDocumentId(documentId);
+    setPreviewPage(1);
+    setSelectedSource(null);
 
     setCurrentDocument({
       document_id: selected.document_id,
@@ -380,6 +434,8 @@ function App() {
       if (selectedDocumentId === documentId) {
         setSelectedDocumentId("");
         setCurrentDocument(null);
+        setPreviewPage(1);
+        setSelectedSource(null);
         setQuestion("");
         setAnswer("");
         setSources([]);
@@ -530,6 +586,8 @@ function App() {
       setDocuments([]);
       setCurrentDocument(null);
       setSelectedDocumentId("");
+      setPreviewPage(1);
+      setSelectedSource(null);
       setUploadMessage(data.message);
       setQuestion("");
       setAnswer("");
@@ -628,6 +686,39 @@ function App() {
     } catch (error) {
       console.error("SAVE NOTE ERROR:", error);
     }
+  };
+
+  const handleSourcePreview = (source) => {
+    if (!source) {
+      return;
+    }
+  
+    const pageNumber = Number(source.page);
+  
+    if (Number.isNaN(pageNumber) || pageNumber <= 0) {
+      return;
+    }
+  
+    setSelectedSource(source);
+    setPreviewPage(pageNumber);
+  
+    setTimeout(() => {
+      const viewer = pdfViewerRef.current;
+      const pageElement = pageRefs.current[pageNumber];
+  
+      if (!viewer || !pageElement) {
+        return;
+      }
+  
+      const viewerTop = viewer.getBoundingClientRect().top;
+      const pageTop = pageElement.getBoundingClientRect().top;
+      const scrollOffset = pageTop - viewerTop + viewer.scrollTop - 12;
+  
+      viewer.scrollTo({
+        top: scrollOffset,
+        behavior: "smooth",
+      });
+    }, 100);
   };
 
   const deleteNote = async (noteId) => {
@@ -1237,19 +1328,21 @@ function App() {
                       return (
                         <div className="source-card-panel">
                           {source?.url ? (
-                            <a
-                              className="citation-title citation-link"
-                              href={source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              className={`citation-title citation-preview-button ${
+                                selectedSource?.page === source?.page &&
+                                selectedSource?.preview === source?.preview
+                                  ? "active-citation-source"
+                                  : ""
+                              }`}
+                              type="button"
+                              onClick={() => handleSourcePreview(source)}
                             >
-                              {cleanSourceName(source?.source)} — Page{" "}
-                              {source?.page || "Unknown"}
-                            </a>
+                              {cleanSourceName(source?.source)} — Page {source?.page || "Unknown"}
+                            </button>
                           ) : (
                             <p className="citation-title">
-                              {cleanSourceName(source?.source)} — Page{" "}
-                              {source?.page || "Unknown"}
+                              {cleanSourceName(source?.source)} — Page {source?.page || "Unknown"}
                             </p>
                           )}
 
@@ -1320,9 +1413,42 @@ function App() {
               <h2>Uploaded File</h2>
 
               {currentDocument && (
-                <p className="document-preview-name">
-                  {currentDocument.filename}
-                </p>
+                <>
+                  <p className="document-preview-name">{currentDocument.filename}</p>
+
+                  {isPdfDocument && (
+                    <div className="document-preview-controls">
+                      <p className="document-preview-page">
+                        Previewing page {previewPage}
+                        {pdfPageCount ? ` of ${pdfPageCount}` : ""}
+                      </p>
+
+                      {selectedSource && (
+                        <p className="active-source-label">
+                          Selected source: Page {selectedSource.page}
+                        </p>
+                      )}
+
+                      <div className="pdf-zoom-controls">
+                        <button
+                          type="button"
+                          onClick={() => setPdfScale((scale) => Math.max(0.7, scale - 0.1))}
+                        >
+                          −
+                        </button>
+
+                        <span>{Math.round(pdfScale * 100)}%</span>
+
+                        <button
+                          type="button"
+                          onClick={() => setPdfScale((scale) => Math.min(1.8, scale + 0.1))}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -1341,11 +1467,59 @@ function App() {
             )}
 
             {currentDocument && currentDocument.storage_url && isPdfDocument && (
-              <iframe
-                className="pdf-preview-frame"
-                src={currentDocument.storage_url}
-                title={`Preview of ${currentDocument.filename}`}
-              />
+              <div
+                className="custom-pdf-viewer"
+                ref={pdfViewerRef}
+                onScroll={handlePdfScroll}
+              >
+                <Document
+                  file={currentDocument.storage_url}
+                  onLoadSuccess={handlePdfLoadSuccess}
+                  loading={<p className="pdf-loading-text">Loading PDF...</p>}
+                  error={
+                    <div className="empty-preview-state">
+                      <p>PDF preview unavailable</p>
+                      <span>
+                        The file could not be loaded in the custom viewer. You can still open
+                        it directly.
+                      </span>
+                      <a
+                        className="document-open-link"
+                        href={currentDocument.storage_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open File
+                      </a>
+                    </div>
+                  }
+                >
+                  {Array.from(new Array(pdfPageCount || 0), (_, index) => {
+                    const pageNumber = index + 1;
+              
+                    return (
+                      <div
+                        className={`pdf-page-shell ${
+                          Number(selectedSource?.page) === pageNumber ? "active-source-page" : ""
+                        }`}
+                        key={`page-${pageNumber}`}
+                        ref={(element) => {
+                          pageRefs.current[pageNumber] = element;
+                        }}
+                      >
+                        <p className="pdf-page-label">Page {pageNumber}</p>
+              
+                        <Page
+                          pageNumber={pageNumber}
+                          scale={pdfScale}
+                          renderTextLayer
+                          renderAnnotationLayer
+                        />
+                      </div>
+                    );
+                  })}
+                </Document>
+              </div>
             )}
 
             {currentDocument && currentDocument.storage_url && isTextDocument && (

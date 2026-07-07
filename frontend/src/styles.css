@@ -32,10 +32,6 @@ body {
   background-attachment: fixed;
 }
 
-#root {
-  max-width: none;
-}
-
 body::before {
   content: "";
   position: fixed;
@@ -61,6 +57,10 @@ body::after {
   opacity: 0.8;
 }
 
+#root {
+  max-width: none;
+}
+
 button,
 input,
 textarea {
@@ -68,12 +68,12 @@ textarea {
 }
 
 button {
-  border: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-top: 18px;
   padding: 13px 20px;
+  border: none;
   border-radius: 15px;
   background: linear-gradient(135deg, #2563eb, #4f46e5 55%, #7c3aed);
   color: #ffffff;
@@ -134,10 +134,10 @@ button:disabled {
   position: relative;
   width: min(1180px, calc(100% - 48px));
   margin: 26px auto 10px;
-  text-align: center;
   padding: 58px 28px 48px;
   overflow: hidden;
   border-radius: 34px;
+  text-align: center;
 }
 
 .hero::before {
@@ -210,11 +210,11 @@ h1 {
   padding: 16px 18px;
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 16px;
+  outline: none;
   background: rgba(248, 250, 252, 0.95);
   color: #0f172a;
   font-size: 17px;
   font-weight: 650;
-  outline: none;
 }
 
 .auth-form input:focus {
@@ -222,7 +222,7 @@ h1 {
   box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.12);
 }
 
-/* FULL SCREEN LOGGED-IN WORKSPACE */
+/* FULL SCREEN WORKSPACE */
 
 .workspace-topbar {
   position: sticky;
@@ -322,10 +322,12 @@ h1 {
   margin: 0;
   padding: 16px;
   align-items: stretch;
+  overflow: hidden;
 }
 
 .workspace-left {
   min-width: 0;
+  min-height: 0;
   height: 100%;
   overflow-y: auto;
   padding-right: 3px;
@@ -333,10 +335,26 @@ h1 {
   scrollbar-color: #334155 rgba(226, 232, 240, 0.55);
 }
 
+.workspace-left::-webkit-scrollbar {
+  width: 10px;
+}
+
+.workspace-left::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.55);
+  border-radius: 999px;
+}
+
+.workspace-left::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 999px;
+  border: 2px solid rgba(226, 232, 240, 0.75);
+}
+
 .workspace-right {
-  min-width: 0;
-  height: 100%;
   position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
 }
 
 .workspace-left .card,
@@ -347,7 +365,11 @@ h1 {
   padding: 22px;
 }
 
+/* DOCUMENT PREVIEW */
+
 .document-preview-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -365,6 +387,9 @@ h1 {
 }
 
 .document-preview-header {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
   margin-bottom: 10px;
   text-align: center;
 }
@@ -385,8 +410,8 @@ h1 {
 }
 
 .document-preview-name {
-  margin: 0 auto;
   max-width: 88%;
+  margin: 0 auto;
   color: #475569;
   font-size: 13px;
   font-weight: 800;
@@ -395,12 +420,23 @@ h1 {
   white-space: nowrap;
 }
 
-.pdf-preview-frame {
-  width: 100%;
-  height: calc(100% - 78px);
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 18px;
-  background: #ffffff;
+.document-preview-controls {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.document-preview-page,
+.active-source-label {
+  margin: 4px auto 0;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.active-source-label {
+  margin-top: 2px;
+  color: #1d4ed8;
 }
 
 .empty-preview-state {
@@ -444,6 +480,122 @@ h1 {
   font-weight: 900;
   text-decoration: none;
   box-shadow: 0 14px 28px rgba(37, 99, 235, 0.22);
+}
+
+.pdf-preview-frame {
+  width: 100%;
+  height: calc(100% - 78px);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+/* CUSTOM PDF VIEWER */
+
+.custom-pdf-viewer {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(241, 245, 249, 0.94), rgba(248, 250, 252, 0.88));
+}
+
+.custom-pdf-viewer::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.custom-pdf-viewer::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.55);
+  border-radius: 999px;
+}
+
+.custom-pdf-viewer::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #2563eb, #7c3aed);
+  border-radius: 999px;
+  border: 2px solid rgba(226, 232, 240, 0.75);
+}
+
+.pdf-page-shell {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 22px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow:
+    0 14px 30px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.pdf-page-label {
+  margin: 0 0 10px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.react-pdf__Page {
+  display: flex;
+  justify-content: center;
+}
+
+.react-pdf__Page canvas {
+  max-width: 100%;
+  height: auto !important;
+  border-radius: 10px;
+}
+
+.pdf-loading-text {
+  margin: 24px 0;
+  color: #334155;
+  font-size: 16px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.pdf-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.8);
+  border: 1px solid rgba(147, 197, 253, 0.42);
+}
+
+.pdf-zoom-controls button {
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.pdf-zoom-controls span {
+  min-width: 46px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.active-source-page {
+  outline: 4px solid rgba(37, 99, 235, 0.75);
+  box-shadow:
+    0 0 0 8px rgba(37, 99, 235, 0.14),
+    0 18px 40px rgba(37, 99, 235, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 /* CARDS */
@@ -612,8 +764,6 @@ input[type="file"]::file-selector-button {
   padding: 13px 18px;
 }
 
-/* CURRENT DOCUMENT */
-
 .document-card {
   text-align: center;
 }
@@ -625,7 +775,7 @@ input[type="file"]::file-selector-button {
   font-weight: 650;
 }
 
-/* TABS / INTELLIGENCE / QUIZ */
+/* INTELLIGENCE / QUIZ / TABS */
 
 .intelligence-card,
 .quiz-card,
@@ -679,10 +829,10 @@ input[type="file"]::file-selector-button {
   justify-content: center;
   align-items: center;
   gap: 10px;
-  margin: 20px auto 18px;
-  padding: 9px;
   width: fit-content;
   max-width: 100%;
+  margin: 20px auto 18px;
+  padding: 9px;
   border-radius: 999px;
   background:
     linear-gradient(135deg, rgba(239, 246, 255, 0.92), rgba(238, 242, 255, 0.88));
@@ -699,8 +849,8 @@ input[type="file"]::file-selector-button {
   padding: 11px 16px;
   border-radius: 999px;
   background: transparent;
-  color: #334155;
   box-shadow: none;
+  color: #334155;
   font-size: 14px;
   font-weight: 950;
   white-space: nowrap;
@@ -710,8 +860,8 @@ input[type="file"]::file-selector-button {
 .quiz-tab:hover,
 .question-tab:hover {
   transform: none;
-  box-shadow: none;
   background: rgba(219, 234, 254, 0.95);
+  box-shadow: none;
 }
 
 .intelligence-tab.active-tab,
@@ -730,8 +880,8 @@ input[type="file"]::file-selector-button {
 }
 
 .action-tab-button {
-  font-size: 15px;
   padding: 13px 18px;
+  font-size: 15px;
 }
 
 .action-tab-button:not(:disabled) {
@@ -824,12 +974,12 @@ input[type="file"]::file-selector-button {
   border-radius: 999px;
   background: linear-gradient(135deg, #eff6ff, #eef2ff);
   color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 900;
+  border: 1px solid rgba(37, 99, 235, 0.18);
   box-shadow:
     0 10px 22px rgba(37, 99, 235, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(37, 99, 235, 0.18);
-  font-size: 14px;
-  font-weight: 900;
 }
 
 /* QUIZ */
@@ -866,12 +1016,12 @@ input[type="file"]::file-selector-button {
 .quiz-option {
   margin: 0;
   padding: 13px 15px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 15px;
   background: rgba(248, 250, 252, 0.95);
   color: #334155;
   font-size: 15px;
   font-weight: 700;
-  border: 1px solid rgba(148, 163, 184, 0.22);
 }
 
 .quiz-answer-button {
@@ -893,7 +1043,7 @@ input[type="file"]::file-selector-button {
   line-height: 1.65;
 }
 
-/* QUESTION AREA */
+/* QUESTION / CHAT HISTORY */
 
 textarea {
   width: 100%;
@@ -932,8 +1082,6 @@ textarea::placeholder {
   justify-content: center;
   gap: 12px;
 }
-
-/* CHAT HISTORY */
 
 .chat-entry {
   display: grid;
@@ -994,13 +1142,13 @@ textarea::placeholder {
 }
 
 .source-panel h3 {
-  text-align: left;
   margin-bottom: 12px;
+  text-align: left;
 }
 
 .source-tabs {
-  margin: 12px 0 16px;
   justify-content: flex-start;
+  margin: 12px 0 16px;
 }
 
 .source-card-panel {
@@ -1021,13 +1169,20 @@ textarea::placeholder {
   line-height: 1.68;
 }
 
-.citation-title {
+.citation-title,
+.citation-preview-button {
   display: block;
+  width: 100%;
   margin: 0 0 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
   color: #1d4ed8;
   font-size: 16px;
   font-weight: 950;
   line-height: 1.45;
+  text-align: left;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
@@ -1036,7 +1191,20 @@ textarea::placeholder {
   text-decoration: none;
 }
 
-.citation-link:hover {
+.citation-link:hover,
+.citation-preview-button:hover {
+  transform: none;
+  box-shadow: none;
+  filter: none;
+  text-decoration: underline;
+}
+
+.citation-preview-button {
+  cursor: pointer;
+}
+
+.active-citation-source {
+  color: #7c3aed;
   text-decoration: underline;
 }
 
@@ -1134,7 +1302,7 @@ textarea::placeholder {
 
 /* RESPONSIVE */
 
-@media (max-width: 1100px) {
+@media (max-width: 850px) {
   .workspace-layout {
     grid-template-columns: 1fr;
     height: auto;
@@ -1164,8 +1332,8 @@ textarea::placeholder {
   }
 
   .badge {
-    font-size: 16px;
     padding: 11px 17px;
+    font-size: 16px;
   }
 
   h1 {
@@ -1174,6 +1342,11 @@ textarea::placeholder {
 
   .hero p:not(.badge) {
     font-size: 17px;
+  }
+
+  .auth-card {
+    width: calc(100% - 24px);
+    padding: 28px 18px;
   }
 
   .workspace-topbar {
@@ -1187,8 +1360,8 @@ textarea::placeholder {
   }
 
   .workspace-layout {
-    padding: 10px;
     gap: 14px;
+    padding: 10px;
   }
 
   .workspace-right {
@@ -1196,8 +1369,8 @@ textarea::placeholder {
   }
 
   .document-preview-card {
-    padding: 14px;
-    border-radius: 20px;
+    padding: 16px;
+    border-radius: 24px;
   }
 
   .pdf-preview-frame {

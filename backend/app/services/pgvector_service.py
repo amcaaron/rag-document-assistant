@@ -41,8 +41,11 @@ def store_chunks_in_pgvector(
 
     for index, chunk in enumerate(chunks):
         page_number = chunk.metadata.get("page")
+
         if page_number is not None:
-            page_number = int(page_number) + 1
+            page_number = int(page_number)
+        else:
+            page_number = 1
 
         content = chunk.page_content.strip()
 
