@@ -181,7 +181,7 @@ h1 {
   font-size: clamp(58px, 8vw, 104px);
   line-height: 0.9;
   font-weight: 950;
-  letter-spacing: -0.08em;
+  letter-spacing: -0.04em;
   text-shadow: 0 12px 36px rgba(37, 99, 235, 0.12);
 }
 
@@ -228,9 +228,9 @@ h1 {
   position: sticky;
   top: 0;
   z-index: 50;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
   gap: 18px;
   width: 100vw;
   margin: 0;
@@ -1300,6 +1300,101 @@ textarea::placeholder {
   text-align: left;
 }
 
+.workspace-brand {
+  flex: 0 0 auto;
+}
+
+.top-workspace-tabs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 680px;
+  padding: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+}
+
+.top-workspace-tab {
+  margin: 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.top-workspace-tab:hover {
+  transform: none;
+  box-shadow: none;
+  background: rgba(219, 234, 254, 0.9);
+}
+
+.active-top-workspace-tab {
+  background: linear-gradient(135deg, #2563eb, #4f46e5, #7c3aed);
+  color: #ffffff;
+  box-shadow:
+    0 10px 22px rgba(37, 99, 235, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.top-workspace-tabs {
+  justify-self: center;
+}
+
+.top-workspace-tab {
+  position: relative;
+}
+
+.tab-notice-badge {
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  box-shadow:
+    0 8px 18px rgba(22, 163, 74, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  animation: tabNoticePop 0.28s ease, tabNoticeFade 2.5s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes tabNoticePop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tabNoticeFade {
+  0%,
+  72% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
 /* RESPONSIVE */
 
 @media (max-width: 850px) {
@@ -1425,5 +1520,25 @@ textarea::placeholder {
 
   .delete-note-button {
     width: 100%;
+  }
+
+  .workspace-topbar {
+    grid-template-columns: 1fr;
+  }
+  
+  .top-workspace-tabs {
+    width: 100%;
+    max-width: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .top-workspace-tab {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  
+  .workspace-account-actions {
+    justify-content: space-between;
   }
 }

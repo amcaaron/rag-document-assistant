@@ -75,7 +75,11 @@ function App() {
   const [savedNotes, setSavedNotes] = useState([]);
   const pageRefs = useRef({});
   const pdfViewerRef = useRef(null);
+  
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState("documents");
 
+  const [tabNotice, setTabNotice] = useState(null);
+  
   useEffect(() => {
     const getSession = async () => {
       const { data, error } = await supabase.auth.getSession();
@@ -166,6 +170,14 @@ function App() {
   
     loadSelectedDocumentChatHistory();
   }, [user, selectedDocumentId]);
+
+  const showTabNotice = (tabName, label) => {
+    setTabNotice({ tabName, label });
+  
+    setTimeout(() => {
+      setTabNotice(null);
+    }, 2500);
+  };
 
   const handlePdfLoadSuccess = ({ numPages }) => {
     setPdfPageCount(numPages);
@@ -321,6 +333,7 @@ function App() {
       console.log("FRONTEND UPLOAD RESPONSE:", data);
 
       setUploadMessage(data.message || "Document uploaded successfully.");
+      showTabNotice("documents", "Updated");
 
       setCurrentDocument({
         document_id: data.document_id,
@@ -489,6 +502,7 @@ function App() {
 
     const userQuestion = question;
 
+    showTabNotice("chat", "New");
     setLoadingAnswer(true);
     setQuestion("");
     setAnswer("");
@@ -623,6 +637,7 @@ function App() {
       console.log("DOCUMENT INTELLIGENCE RESPONSE:", data);
 
       setDocumentIntelligence(data.intelligence);
+      showTabNotice("study", "Ready");
     } catch (error) {
       console.error("DOCUMENT INTELLIGENCE ERROR:", error);
 
@@ -655,6 +670,7 @@ function App() {
       console.log("DOCUMENT QUIZ RESPONSE:", data);
 
       setDocumentQuiz(data.quiz);
+      showTabNotice("study", "Ready");
     } catch (error) {
       console.error("DOCUMENT QUIZ ERROR:", error);
 
@@ -683,6 +699,7 @@ function App() {
       });
   
       setSavedNotes((prevNotes) => [newNote, ...prevNotes]);
+      showTabNotice("notes", "Saved");
     } catch (error) {
       console.error("SAVE NOTE ERROR:", error);
     }
@@ -793,10 +810,64 @@ function App() {
   return (
     <div className="app">
       <header className="workspace-topbar">
-        <div>
+        <div className="workspace-brand">
           <p className="workspace-kicker">RAG Personal Document Assistant</p>
           <h1 className="workspace-logo">DocuMind AI</h1>
         </div>
+
+        <nav className="top-workspace-tabs" aria-label="Workspace sections">
+          <button
+            type="button"
+            className={`top-workspace-tab ${
+              activeWorkspaceTab === "documents" ? "active-top-workspace-tab" : ""
+            }`}
+            onClick={() => setActiveWorkspaceTab("documents")}
+          >
+            Documents
+            {tabNotice?.tabName === "documents" && (
+              <span className="tab-notice-badge">{tabNotice.label}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={`top-workspace-tab ${
+              activeWorkspaceTab === "study" ? "active-top-workspace-tab" : ""
+            }`}
+            onClick={() => setActiveWorkspaceTab("study")}
+          >
+            Study Tools
+            {tabNotice?.tabName === "study" && (
+              <span className="tab-notice-badge">{tabNotice.label}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={`top-workspace-tab ${
+              activeWorkspaceTab === "chat" ? "active-top-workspace-tab" : ""
+            }`}
+            onClick={() => setActiveWorkspaceTab("chat")}
+          >
+            Chat
+            {tabNotice?.tabName === "study" && (
+              <span className="tab-notice-badge">{tabNotice.label}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={`top-workspace-tab ${
+              activeWorkspaceTab === "notes" ? "active-top-workspace-tab" : ""
+            }`}
+            onClick={() => setActiveWorkspaceTab("notes")}
+          >
+            Notes
+            {tabNotice?.tabName === "study" && (
+              <span className="tab-notice-badge">{tabNotice.label}</span>
+            )}
+          </button>
+        </nav>
 
         <div className="workspace-account-actions">
           <div className="user-account-pill">
@@ -815,6 +886,8 @@ function App() {
 
       <main className="workspace-layout">
         <section className="workspace-left">
+          {activeWorkspaceTab === "documents" && (
+            <>
           <section className="card">
             <h2>Upload Document</h2>
 
@@ -881,6 +954,54 @@ function App() {
         </section>
       )}
 
+      {currentDocument && (
+        <section className="document-card">
+          <h3>Current Document</h3>
+
+          <p>
+            <strong>File:</strong> {currentDocument.filename}
+          </p>
+          <p>
+            <strong>Pages:</strong> {currentDocument.pages}
+          </p>
+          <p>
+            <strong>Chunks:</strong> {currentDocument.chunks}
+          </p>
+
+          <div className="intelligence-tabs action-tabs">
+            <button
+              className={
+                loadingIntelligence
+                  ? "intelligence-tab action-tab-button active-tab"
+                  : "intelligence-tab action-tab-button"
+              }
+              onClick={handleGenerateIntelligence}
+              disabled={loadingIntelligence}
+            >
+              {loadingIntelligence
+                ? "Generating Overview..."
+                : "Generate Document Overview"}
+            </button>
+
+            <button
+              className={
+                loadingQuiz
+                  ? "intelligence-tab action-tab-button active-tab"
+                  : "intelligence-tab action-tab-button"
+              }
+              onClick={handleGenerateQuiz}
+              disabled={loadingQuiz}
+            >
+              {loadingQuiz ? "Generating Quiz..." : "Generate Study Quiz"}
+            </button>
+          </div>
+        </section>
+      )}
+            </>
+          )}
+
+          {activeWorkspaceTab === "study" && (
+            <>
       {currentDocument && (
         <section className="document-card">
           <h3>Current Document</h3>
@@ -1239,7 +1360,11 @@ function App() {
           </div>
         </section>
       )}
+            </>
+          )}
 
+          {activeWorkspaceTab === "chat" && (
+            <>
       <section className="card">
         <h2>Ask a Question</h2>
 
@@ -1357,7 +1482,11 @@ function App() {
           ))}
         </section>
       )}
+            </>
+          )}
 
+          {activeWorkspaceTab === "notes" && (
+            <>
       {Array.isArray(savedNotes) && savedNotes.length > 0 && (
         <section className="card saved-notes-card">
           <div className="saved-notes-header">
@@ -1404,6 +1533,8 @@ function App() {
           </div>
         </section>
       )}
+            </>
+          )}
         </section>
 
         <aside className="workspace-right">
