@@ -329,7 +329,7 @@ function App() {
     setUploadMessage("Uploading and indexing document...");
 
     try {
-      const data = await uploadDocument(file, user?.id);
+      const data = await uploadDocument(file);
       console.log("FRONTEND UPLOAD RESPONSE:", data);
 
       setUploadMessage(data.message || "Document uploaded successfully.");
@@ -437,7 +437,7 @@ function App() {
   
     try {
       await deleteDocument(documentId);
-      await removeUserDocument(documentId);
+      await removeUserDocument(documentId, user.id);
       await clearChatHistoryForDocument(user.id, documentId);
   
       setDocuments((prevDocuments) =>
@@ -509,7 +509,7 @@ function App() {
     setSources([]);
 
     try {
-      const data = await askQuestion(userQuestion, selectedDocumentId, user?.id);
+      const data = await askQuestion(userQuestion, selectedDocumentId);
 
       const safeAnswer =
         typeof data.answer === "string"

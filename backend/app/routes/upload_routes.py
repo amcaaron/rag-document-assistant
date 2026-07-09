@@ -2,36 +2,28 @@ import os
 import shutil
 import uuid
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 
 from app.config import UPLOAD_DIR
+from app.services.auth_service import get_current_user
 from app.services.pdf_service import load_document
-from app.services.storage_service import (
-    upload_file_to_supabase,
-    delete_file_from_supabase,
+from app.services.storage_service import upload_file_to_supabase, delete_file_from_supabase
+from app.services.vector_service import split_documents
+from app.services.pgvector_service import (
+    supabase,
+    store_chunks_in_pgvector,
+    delete_document_chunks_from_pgvector,
+    clear_user_chunks_from_pgvector,
 )
-from app.services.vector_service import (
-    split_documents,
-    store_documents,
-    clear_vectorstore,
-    delete_document_vectors,
-)
-from app.services.document_registry import (
-    add_document,
-    load_documents,
-    delete_document,
-    clear_documents,
-)
-
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
-
 
 @router.post("/upload")
 def upload_document(
     file: UploadFile = File(...),
-    user_id: str = Form(None),
+    current_user=Depends(get_current_user),
 ):
+    user_id = current_user["id"]
     print("\n==============================")
     print("1. Upload request received")
     print(f"Uploaded filename: {file.filename}")
@@ -131,49 +123,32 @@ def upload_document(
 
         print("13. Metadata added successfully")
 
-        print("14. Storing chunks in local ChromaDB...")
-        store_documents(chunks)
+        print("14. Skipping local ChromaDB storage. Using Supabase pgvector only.")
 
         print("15. Chunks stored successfully in local ChromaDB")
 
-        if user_id:
-            print("16. Storing chunks in Supabase pgvector...")
+        print("15. Storing chunks in Supabase pgvector...")
 
-            pgvector_chunks_created = store_chunks_in_pgvector(
-                chunks=chunks,
-                user_id=user_id,
-                document_id=document_id,
-                filename=file.filename,
-                stored_filename=safe_filename,
-                storage_path=storage_path,
-                storage_url=storage_url,
-            )
+        pgvector_chunks_created = store_chunks_in_pgvector(
+            chunks=chunks,
+            user_id=user_id,
+            document_id=document_id,
+            filename=file.filename,
+            stored_filename=safe_filename,
+            storage_path=storage_path,
+            storage_url=storage_url,
+        )
 
-            print(
-                f"17. Chunks stored successfully in Supabase pgvector: "
-                f"{pgvector_chunks_created}"
-            )
-        else:
-            pgvector_chunks_created = 0
-            print("16. No user_id provided. Skipping Supabase pgvector storage.")
+        print(
+            f"16. Chunks stored successfully in Supabase pgvector: "
+            f"{pgvector_chunks_created}"
+        )
 
-        print("18. Adding document to registry...")
+        print("17. Upload route completed successfully\n")
 
-        document_data = {
-            "document_id": document_id,
-            "filename": file.filename,
-            "stored_filename": safe_filename,
-            "pages_loaded": len(documents),
-            "chunks_created": len(chunks),
-            "pgvector_chunks_created": pgvector_chunks_created,
-            "storage_path": storage_path,
-            "storage_url": storage_url,
-        }
-
-        add_document(document_data)
-
-        print("19. Document added to registry")
-        print("20. Upload route completed successfully\n")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print("Temporary local file deleted.")
 
         return {
             "message": "Document uploaded, indexed, and stored successfully",
@@ -214,36 +189,52 @@ def list_uploaded_documents():
 
 
 @router.delete("/clear/all")
-def clear_all_documents():
+def clear_all_documents(
+    current_user=Depends(get_current_user),
+):
+    user_id = current_user["id"]
+
     print("\n==============================")
-    print("CLEAR ALL DOCUMENTS CALLED")
+    print("CLEAR USER DOCUMENTS CALLED")
+    print(f"Verified User ID: {user_id}")
     print("==============================\n")
 
     try:
-        print("1. Loading documents before clearing...")
-        documents = load_documents()
+        print("1. Finding this user's documents in Supabase...")
+        document_response = (
+            supabase
+            .table("documents")
+            .select("*")
+            .eq("user_id", user_id)
+            .execute()
+        )
 
-        print("2. Deleting files from Supabase Storage...")
-        for document in documents:
+        user_documents = document_response.data or []
+
+        print(f"2. Documents found for user: {len(user_documents)}")
+
+        print("3. Deleting files from Supabase Storage...")
+        for document in user_documents:
             storage_path = document.get("storage_path")
 
             if storage_path:
                 delete_file_from_supabase(storage_path)
 
-        print("3. Clearing ChromaDB vectorstore...")
-        clear_vectorstore()
-        if documents:
-            for document in documents:
-                document_id = document.get("document_id")
-                if document_id:
-                    delete_document_chunks_from_pgvector(document_id)
+        print("4. Clearing this user's pgvector chunks...")
+        clear_user_chunks_from_pgvector(user_id)
 
-        print("4. Clearing document registry...")
-        clear_documents()
+        print("5. Deleting metadata from Supabase documents table...")
+        (
+            supabase
+            .table("documents")
+            .delete()
+            .eq("user_id", user_id)
+            .execute()
+        )
 
-        print("5. Clear all completed successfully")
+        print("6. Clear user documents completed successfully")
 
-        return {"message": "All documents cleared successfully"}
+        return {"message": "Your documents were cleared successfully"}
 
     except Exception as error:
         print("CLEAR ALL ERROR OCCURRED")
@@ -255,42 +246,62 @@ def clear_all_documents():
             detail=f"Failed to clear documents: {str(error)}",
         )
 
-
 @router.delete("/{document_id}")
-def delete_uploaded_document(document_id: str):
+def delete_uploaded_document(
+    document_id: str,
+    current_user=Depends(get_current_user),
+):
+    user_id = current_user["id"]
+
     print("\n==============================")
     print(f"DELETE DOCUMENT CALLED: {document_id}")
+    print(f"Verified User ID: {user_id}")
     print("==============================\n")
 
     try:
-        print("1. Loading documents to find storage path...")
-        documents = load_documents()
-
-        document_to_delete = next(
-            (
-                document
-                for document in documents
-                if document.get("document_id") == document_id
-            ),
-            None,
+        print("1. Finding document metadata in Supabase...")
+        document_response = (
+            supabase
+            .table("documents")
+            .select("*")
+            .eq("document_id", document_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
         )
 
-        if document_to_delete:
-            storage_path = document_to_delete.get("storage_path")
+        matching_documents = document_response.data or []
 
-            if storage_path:
-                print("2. Deleting file from Supabase Storage...")
-                delete_file_from_supabase(storage_path)
-            else:
-                print("2. No Supabase storage path found for this document")
+        if not matching_documents:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found for this user.",
+            )
+
+        document_to_delete = matching_documents[0]
+        storage_path = document_to_delete.get("storage_path")
+
+        if storage_path:
+            print("2. Deleting file from Supabase Storage...")
+            delete_file_from_supabase(storage_path)
         else:
-            print("2. Document not found in registry, continuing cleanup")
+            print("2. No storage path found. Skipping file deletion.")
 
-        print("3. Deleting document vectors...")
-        delete_document_chunks_from_pgvector(document_id)
+        print("3. Deleting pgvector chunks for verified user...")
+        delete_document_chunks_from_pgvector(
+            document_id=document_id,
+            user_id=user_id,
+        )
 
-        print("4. Deleting document from registry...")
-        delete_document(document_id)
+        print("4. Deleting metadata from Supabase documents table...")
+        (
+            supabase
+            .table("documents")
+            .delete()
+            .eq("document_id", document_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
 
         print("5. Delete completed successfully")
 
@@ -298,6 +309,9 @@ def delete_uploaded_document(document_id: str):
             "message": "Document deleted successfully",
             "document_id": document_id,
         }
+
+    except HTTPException:
+        raise
 
     except Exception as error:
         print("DELETE DOCUMENT ERROR OCCURRED")
@@ -309,8 +323,3 @@ def delete_uploaded_document(document_id: str):
             detail=f"Failed to delete document: {str(error)}",
         )
     
-from app.services.pgvector_service import (
-    store_chunks_in_pgvector,
-    delete_document_chunks_from_pgvector,
-    clear_user_chunks_from_pgvector,
-)

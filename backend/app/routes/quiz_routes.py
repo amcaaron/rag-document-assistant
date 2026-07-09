@@ -1,22 +1,42 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.services.auth_service import get_current_user
 from app.services.quiz_service import generate_document_quiz
-from app.services.document_registry import get_document
 
 
 router = APIRouter(prefix="/documents", tags=["Quiz Generation"])
 
 
 @router.post("/{document_id}/quiz")
-def create_document_quiz(document_id: str):
-    document = get_document(document_id)
+def create_document_quiz(
+    document_id: str,
+    current_user=Depends(get_current_user),
+):
+    user_id = current_user["id"]
 
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found.")
+    print("\n==============================")
+    print("DOCUMENT QUIZ CALLED")
+    print(f"Document ID: {document_id}")
+    print(f"Verified User ID: {user_id}")
+    print("==============================\n")
 
-    quiz = generate_document_quiz(document_id)
+    try:
+        quiz = generate_document_quiz(
+            document_id=document_id,
+            user_id=user_id,
+        )
 
-    return {
-        "document_id": document_id,
-        "filename": document.get("filename"),
-        "quiz": quiz,
-    }
+        return {
+            "document_id": document_id,
+            "quiz": quiz,
+        }
+
+    except Exception as error:
+        print("DOCUMENT QUIZ ERROR")
+        print(f"Error type: {type(error)}")
+        print(f"Error message: {error}")
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate document quiz: {str(error)}",
+        )

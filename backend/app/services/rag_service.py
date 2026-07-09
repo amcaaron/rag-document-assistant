@@ -17,6 +17,11 @@ def answer_question(question: str, document_id: str, user_id: str):
         match_count=8,
     )
 
+    print("RAG SEARCH DEBUG")
+    print("User ID:", user_id)
+    print("Document ID:", document_id)
+    print("Docs found:", len(docs))
+
     if not docs:
         return {
             "answer": "I could not find that information in the uploaded document.",

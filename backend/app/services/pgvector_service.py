@@ -18,7 +18,6 @@ if not SUPABASE_SERVICE_ROLE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
 def create_embedding(text: str) -> list[float]:
     response = openai_client.embeddings.create(
         model="text-embedding-3-small",
@@ -26,6 +25,17 @@ def create_embedding(text: str) -> list[float]:
     )
 
     return response.data[0].embedding
+
+def sanitize_postgres_text(text: str) -> str:
+    if not text:
+        return ""
+
+    return (
+        text
+        .replace("\x00", "")
+        .replace("\u0000", "")
+        .strip()
+    )
 
 
 def store_chunks_in_pgvector(
@@ -47,7 +57,7 @@ def store_chunks_in_pgvector(
         else:
             page_number = 1
 
-        content = chunk.page_content.strip()
+        content = sanitize_postgres_text(chunk.page_content)
 
         if not content:
             continue
@@ -58,10 +68,10 @@ def store_chunks_in_pgvector(
             {
                 "user_id": user_id,
                 "document_id": document_id,
-                "filename": filename,
-                "stored_filename": stored_filename,
-                "storage_path": storage_path,
-                "storage_url": storage_url,
+                "filename": sanitize_postgres_text(filename),
+                "stored_filename": sanitize_postgres_text(stored_filename),
+                "storage_path": sanitize_postgres_text(storage_path),
+                "storage_url": sanitize_postgres_text(storage_url),
                 "page": page_number,
                 "chunk_index": index,
                 "content": content,
@@ -98,17 +108,13 @@ def search_chunks_in_pgvector(
     return response.data or []
 
 
-def delete_document_chunks_from_pgvector(document_id: str, user_id: str | None = None) -> bool:
-    query = supabase.table("document_chunks").delete().eq("document_id", document_id)
-
-    if user_id:
-      query = query.eq("user_id", user_id)
-
-    query.execute()
-
-    return True
+def delete_document_chunks_from_pgvector(document_id: str, user_id: str) -> None:
+    supabase.table("document_chunks").delete().eq(
+        "document_id", document_id
+    ).eq(
+        "user_id", user_id
+    ).execute()
 
 
-def clear_user_chunks_from_pgvector(user_id: str) -> bool:
+def clear_user_chunks_from_pgvector(user_id: str) -> None:
     supabase.table("document_chunks").delete().eq("user_id", user_id).execute()
-    return True
