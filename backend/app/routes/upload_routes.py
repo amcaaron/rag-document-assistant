@@ -179,7 +179,10 @@ def upload_document(
 
 @router.get("/")
 def list_uploaded_documents():
-    print("GET /documents/ called")
+    return {
+        "message": "Document listing is handled by Supabase on the frontend.",
+        "documents": [],
+    }
 
     documents = load_documents()
 

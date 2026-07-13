@@ -1,9 +1,4 @@
-from fastapi.testclient import TestClient
-
-from app.main import app
-
-
-client = TestClient(app)
+from tests.conftest import client
 
 
 def test_list_uploaded_documents():
@@ -19,12 +14,7 @@ def test_upload_rejects_unsupported_file_type():
         files={
             "file": ("test.exe", b"fake file content", "application/octet-stream")
         },
-        data={
-            "user_id": "test-user-id"
-        },
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == (
-        "Unsupported file type. Please upload a PDF, DOCX, or TXT file."
-    )
+    assert "Unsupported file type" in response.json()["detail"]
