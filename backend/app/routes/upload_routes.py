@@ -1,6 +1,7 @@
 import os
 import shutil
 import uuid
+import time
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 
@@ -24,10 +25,12 @@ def upload_document(
     current_user=Depends(get_current_user),
 ):
     user_id = current_user["id"]
+    start_time = time.perf_counter()
+
     print("\n==============================")
     print("1. Upload request received")
     print(f"Uploaded filename: {file.filename}")
-    print(f"User ID: {user_id}")
+    print(f"Verified User ID: {user_id}")
     print("==============================\n")
 
     if not file.filename:
@@ -56,31 +59,39 @@ def upload_document(
         print("3. Saving uploaded file locally...")
         print(f"File path: {file_path}")
 
+        save_start = time.perf_counter()
+
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        print("4. File saved locally successfully")
+        print(f"4. File saved locally in {time.perf_counter() - save_start:.2f} seconds")
 
         print("5. Uploading original file to Supabase Storage...")
 
-        storage_owner = user_id if user_id else "anonymous"
-        storage_path = f"{storage_owner}/{safe_filename}"
+        storage_path = f"{user_id}/{safe_filename}"
+
+        storage_start = time.perf_counter()
 
         storage_data = upload_file_to_supabase(
             local_file_path=file_path,
             storage_path=storage_path,
         )
 
+        print(f"6. Storage upload took {time.perf_counter() - storage_start:.2f} seconds")
+
         storage_url = storage_data.get("storage_url")
 
-        print("6. File uploaded to Supabase Storage")
         print(f"Storage path: {storage_path}")
         print(f"Storage URL: {storage_url}")
 
         print("7. Loading document text...")
+
+        load_start = time.perf_counter()
+
         documents = load_document(file_path)
 
-        print(f"8. Document loaded successfully. Pages loaded: {len(documents)}")
+        print(f"8. Document loading took {time.perf_counter() - load_start:.2f} seconds")
+        print(f"Pages loaded: {len(documents)}")
 
         if not documents:
             print("ERROR: No documents/pages loaded")
@@ -90,7 +101,9 @@ def upload_document(
             )
 
         print("9. Checking extracted text length...")
+
         total_text_length = sum(len(doc.page_content.strip()) for doc in documents)
+
         print(f"Total extracted text length: {total_text_length}")
 
         if total_text_length == 0:
@@ -101,9 +114,13 @@ def upload_document(
             )
 
         print("10. Splitting document into chunks...")
+
+        split_start = time.perf_counter()
+
         chunks = split_documents(documents)
 
-        print(f"11. Chunks created after filtering: {len(chunks)}")
+        print(f"11. Chunk splitting took {time.perf_counter() - split_start:.2f} seconds")
+        print(f"Chunks created after filtering: {len(chunks)}")
 
         if not chunks:
             print("ERROR: No useful chunks created")
@@ -122,12 +139,10 @@ def upload_document(
             chunk.metadata["storage_url"] = storage_url
 
         print("13. Metadata added successfully")
-
         print("14. Skipping local ChromaDB storage. Using Supabase pgvector only.")
-
-        print("15. Chunks stored successfully in local ChromaDB")
-
         print("15. Storing chunks in Supabase pgvector...")
+
+        pgvector_start = time.perf_counter()
 
         pgvector_chunks_created = store_chunks_in_pgvector(
             chunks=chunks,
@@ -143,8 +158,10 @@ def upload_document(
             f"16. Chunks stored successfully in Supabase pgvector: "
             f"{pgvector_chunks_created}"
         )
+        print(f"pgvector storage took {time.perf_counter() - pgvector_start:.2f} seconds")
 
-        print("17. Upload route completed successfully\n")
+        print("17. Upload route completed successfully")
+        print(f"Total upload route took {time.perf_counter() - start_time:.2f} seconds\n")
 
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -175,6 +192,11 @@ def upload_document(
             status_code=500,
             detail=f"Upload failed: {str(error)}",
         )
+
+    finally:
+        if "file_path" in locals() and os.path.exists(file_path):
+            os.remove(file_path)
+            print("Temporary local file cleaned up.")
 
 
 @router.get("/")
