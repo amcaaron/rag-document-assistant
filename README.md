@@ -854,6 +854,7 @@ After deploying, test the live app in this order:
 ---
 
 ## Screenshots
+```text
 screenshots/login.png
 screenshots/workspace.png
 screenshots/uploaded-documents.png
@@ -865,6 +866,7 @@ screenshots/saved-notes.png
 screenshots/github-actions.png
 screenshots/render-deploy.png
 screenshots/vercel-deploy.png
+```
 
 ---
 
