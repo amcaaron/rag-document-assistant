@@ -5,8 +5,6 @@ DocuMind AI is a full-stack AI document intelligence platform that allows authen
 The application uses a production-style architecture with a React/Vite frontend, FastAPI backend, Supabase Auth, Supabase Storage, PostgreSQL with pgvector, OpenAI embeddings, and OpenAI chat models. Backend routes verify Supabase access tokens and use the verified user ID to scope uploads, retrieval, chat responses, document intelligence, quiz generation, saved notes, and delete/clear workflows.
 
 ---
-
-```md
 ## Demo Screenshots
 
 ### Workspace
@@ -24,7 +22,10 @@ The application uses a production-style architecture with a React/Vite frontend,
 ### Study Quiz
 
 ![Study Quiz](screenshots/study-quiz.png)
-```
+
+### Saved Notes
+
+![Saved Notes](screenshots/saved-notes.png)
 
 ## Live Demo
 
@@ -853,8 +854,6 @@ After deploying, test the live app in this order:
 ---
 
 ## Screenshots
-
-```text
 screenshots/login.png
 screenshots/workspace.png
 screenshots/uploaded-documents.png
@@ -866,7 +865,6 @@ screenshots/saved-notes.png
 screenshots/github-actions.png
 screenshots/render-deploy.png
 screenshots/vercel-deploy.png
-```
 
 ---
 
