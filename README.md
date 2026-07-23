@@ -1,151 +1,147 @@
-# DocuMind AI — Production-Style RAG Personal Document Assistant
+# DocuMind AI — Secure RAG Document Intelligence Platform
 
-DocuMind AI is a full-stack Retrieval-Augmented Generation application that allows users to securely upload personal documents and interact with them using AI. Users can create an account, upload PDF, DOCX, and TXT files, ask natural language questions, receive source-cited answers, generate document summaries, create study quizzes, and save important AI responses as notes.
+DocuMind AI is a full-stack AI document intelligence platform that allows authenticated users to upload documents, ask source-cited questions, generate study tools, save important notes, and preview cited PDF pages directly in the browser.
 
-The system extracts document text, removes repeated junk content such as ads, headers, footers, and boilerplate text, splits content into searchable chunks, generates OpenAI embeddings, stores persistent vectors in Supabase PostgreSQL with pgvector, and retrieves relevant document sections through semantic search.
-
-DocuMind AI includes a React/Vite frontend deployed on Vercel, a FastAPI backend deployed on Render, and a production-style Supabase architecture for authentication, database persistence, file storage, Row Level Security, and semantic vector search.
+The application uses a production-style architecture with a React/Vite frontend, FastAPI backend, Supabase Auth, Supabase Storage, PostgreSQL with pgvector, OpenAI embeddings, and OpenAI chat models. Backend routes verify Supabase access tokens and use the verified user ID to scope uploads, retrieval, chat responses, document intelligence, quiz generation, saved notes, and delete/clear workflows.
 
 ---
 
-## Demo Preview
+```md
+## Demo Screenshots
 
-### Authentication
-![Login screen](assets/login.png)
+### Workspace
 
-### Document Question Answering
-![Chat with citations](assets/chat-citations.png)
+![Workspace](screenshots/workspace.png)
 
-### AI Document Intelligence
-![Document intelligence](assets/document-intelligence.png)
+### Source-Cited Chat
+
+![Source-Cited Chat](screenshots/chat-sources.png)
+
+### Document Intelligence
+
+![Document Intelligence](screenshots/document-intelligence.png)
 
 ### Study Quiz
-![Study quiz](assets/study-quiz.png)
 
-### Saved Notes
-![Saved notes](assets/saved-notes.png)
-
----
+![Study Quiz](screenshots/study-quiz.png)
+```
 
 ## Live Demo
 
-Frontend:
+### Frontend
 
 ```text
 https://documind-ai-assistant.vercel.app/
 ```
 
-Backend API:
+### Backend API
 
 ```text
 https://documind-ai-backend-wr40.onrender.com
 ```
 
-FastAPI Docs:
+### FastAPI Docs
 
 ```text
 https://documind-ai-backend-wr40.onrender.com/docs
 ```
----
-
-## Project Highlights
-
-* Production-style multi-user RAG application
-* Supabase Auth for user accounts
-* Supabase PostgreSQL for user-owned metadata and saved notes
-* Supabase Storage for persistent uploaded files
-* Supabase pgvector for persistent semantic retrieval
-* Row Level Security for user data isolation
-* FastAPI backend with pytest API tests
-* GitHub Actions CI for automated backend testing
-* Deployed frontend on Vercel and backend on Render
 
 ---
 
-## Features
+## Overview
 
-### Authentication and User Accounts
+DocuMind AI helps users turn static documents into interactive, searchable, study-ready knowledge.
 
-* User sign up and login with Supabase Auth
-* Persistent authenticated sessions
-* Protected application access
-* Log out functionality
-* Logged-in user displayed in the UI
-* User-specific document libraries
-* User-specific saved notes
-* User-specific vector search filtering
+Users can upload PDF, DOCX, or TXT files and ask questions grounded only in the selected document. The system extracts document text, removes repeated junk content such as headers, footers, advertisements, and boilerplate text, splits the document into searchable chunks, creates OpenAI embeddings, stores them in Supabase PostgreSQL with pgvector, and retrieves relevant chunks when the user asks a question.
+
+The app returns AI-generated answers with source citations, page numbers, preview snippets, and clickable citation navigation inside a custom PDF preview panel. Users can also generate document summaries, key takeaways, glossary terms, suggested questions, related topics, study quizzes, persistent chat history, and saved notes.
+
+---
+
+## Key Features
+
+### Authentication and User-Owned Data
+
+- Secure user sign-up and login with Supabase Auth
+- User-specific document libraries
+- User-scoped document chunks using PostgreSQL pgvector
+- Backend verification of Supabase access tokens
+- Protected upload, chat, overview, quiz, delete, and clear routes
+- Backend does not trust frontend-provided user IDs
+- Persistent user data through Supabase tables
 
 ### Document Upload and Management
 
-* Upload PDF, DOCX, and TXT documents
-* Extract text from multiple document formats
-* Remove repeated document noise such as ads, headers, footers, and boilerplate text
-* Split documents into smaller searchable chunks
-* Upload and manage multiple documents
-* Select an active document for question answering
-* Delete individual documents
-* Clear all uploaded documents
-* Store uploaded files persistently in Supabase Storage
-* Store document metadata in Supabase PostgreSQL
-* Prevent users from asking questions before uploading or selecting a document
+- Upload PDF, DOCX, and TXT documents
+- Store original files in Supabase Storage
+- Store document metadata in Supabase PostgreSQL
+- Track filename, document ID, page count, chunk count, storage path, and storage URL
+- Select documents from a user-owned document library
+- Delete individual documents
+- Clear all documents for the logged-in user
+- Clean up Supabase Storage files, pgvector chunks, and metadata on delete
 
 ### Retrieval-Augmented Question Answering
 
-* Generate vector embeddings using OpenAI
-* Store embeddings persistently in Supabase PostgreSQL with pgvector
-* Search document chunks using semantic similarity
-* Filter retrieval by both user ID and document ID
-* Prevent source mixing across different users and documents
-* Generate AI-powered answers using retrieved document context
-* Display source citations with filename, page number, preview text, and clickable links
-* Open cited PDF sources directly from Supabase Storage
-* Maintain chat history during the current session
+- Generate OpenAI embeddings for document chunks
+- Store embeddings in Supabase PostgreSQL with pgvector
+- Retrieve chunks by verified `user_id` and selected `document_id`
+- Prevent one user’s documents from mixing with another user’s retrieval results
+- Generate grounded AI answers from retrieved document context
+- Return source citations with page numbers and preview text
+- Display chat history per user and selected document
+
+### PDF Preview and Source Navigation
+
+- Custom PDF preview panel using React PDF
+- Preview uploaded PDF files directly in the app
+- Click source citations to scroll to the cited PDF page
+- Highlight the active cited page
+- Track current preview page while scrolling
+- Zoom PDF preview in and out
 
 ### AI Document Intelligence
 
-* Generate a high-level document summary
-* Extract key takeaways from uploaded documents
-* Identify important terms and definitions
-* Suggest helpful follow-up questions
-* Recommend related topics for deeper exploration
-* Display document insights in a polished tab-based interface
+- Generate structured document summaries
+- Extract key takeaways
+- Identify important terms and definitions
+- Suggest useful follow-up questions
+- Recommend related topics for deeper learning
+- Display results in a clean study workspace
 
 ### Study Quiz Generation
 
-* Generate multiple-choice questions from uploaded document content
-* Generate short-answer questions from uploaded document content
-* Display one question at a time using a clean tabbed layout
-* Allow users to reveal answers and explanations
-* Help users study and retain information from their uploaded files
+- Generate multiple-choice questions from uploaded documents
+- Generate short-answer questions from uploaded documents
+- Show one question at a time
+- Reveal answers and explanations
+- Help users study and retain document content
 
 ### Saved Notes
 
-* Save important AI-generated answers as notes
-* Store saved notes in Supabase PostgreSQL
-* Tie saved notes to the authenticated user
-* Display saved notes with the original question, answer, document name, and timestamp
-* Delete saved notes from the database
-* Preserve saved notes across refreshes, devices, and sessions
+- Save important AI answers as notes
+- Store saved notes in Supabase
+- Tie notes to the logged-in user and selected document
+- Display saved notes with question, answer, document name, and timestamp
+- Delete saved notes when no longer needed
 
-### Testing and CI/CD
+### UI and Workspace
 
-* Backend API tests with pytest
-* Health check endpoint for backend availability
-* Route validation tests for chat and document endpoints
-* GitHub Actions workflow for automated backend testing
-* CI pipeline runs tests on push and pull requests
+- Modern React/Vite frontend
+- Top navigation workspace tabs
+- Sections for Documents, Study Tools, Chat, and Notes
+- Responsive card-based interface
+- Temporary tab notification badges for new/saved/generated content
+- Deployed frontend on Vercel
+- Deployed backend on Render
 
-### User Interface
+### Testing and CI
 
-* Polished React frontend with responsive design
-* Modern glassmorphism-inspired UI
-* Clean card-based layout
-* Tabbed panels for AI overview, quizzes, source citations, and document actions
-* Clickable citation panels for easier source review
-* User account controls in the main interface
-* Mobile-friendly layout
-* Deployed frontend on Vercel
-* Deployed backend on Render
+- Backend tests with Pytest
+- FastAPI route tests using TestClient
+- Auth dependency overrides for protected route tests
+- GitHub Actions workflow for backend test automation
+- Production deploys tested on Render and Vercel
 
 ---
 
@@ -153,124 +149,39 @@ https://documind-ai-backend-wr40.onrender.com/docs
 
 ### Frontend
 
-* React
-* Vite
-* Axios
-* Supabase JavaScript Client
-* CSS
-* Vercel
+- React
+- Vite
+- JavaScript
+- Axios
+- Supabase JS Client
+- React PDF
+- CSS
+- Vercel
 
 ### Backend
 
-* FastAPI
-* Python
-* LangChain
-* OpenAI API
-* Supabase Python Client
-* Supabase PostgreSQL
-* Supabase Storage
-* Supabase pgvector
-* PyPDF
-* python-docx
-* Uvicorn
-* Render
-* pytest
+- FastAPI
+- Python
+- Uvicorn
+- OpenAI API
+- LangChain
+- PyPDF
+- python-docx
+- Supabase Python Client
+- PostgreSQL
+- pgvector
+- Pytest
+- Render
 
-### Database and Infrastructure
+### Cloud and Infrastructure
 
-* Supabase Auth
-* Supabase PostgreSQL
-* Supabase Storage
-* pgvector
-* Row Level Security
-* GitHub Actions
-* Render
-* Vercel
-
----
-
-## How It Works
-
-The app follows a production-style Retrieval-Augmented Generation pipeline:
-
-```text
-User signs up or logs in
-        ↓
-User uploads a PDF, DOCX, or TXT document
-        ↓
-FastAPI receives the uploaded file
-        ↓
-File is saved to Supabase Storage
-        ↓
-Document metadata is saved to Supabase PostgreSQL
-        ↓
-Text is extracted from the document
-        ↓
-Repeated junk text is removed
-        ↓
-Text is split into searchable chunks
-        ↓
-OpenAI creates vector embeddings
-        ↓
-Embeddings are stored in Supabase PostgreSQL with pgvector
-        ↓
-User selects a document and asks a question
-        ↓
-Backend searches pgvector using user ID and document ID filters
-        ↓
-Relevant chunks are retrieved through semantic similarity
-        ↓
-OpenAI generates an answer using retrieved context
-        ↓
-Answer is returned with clickable source citations
-        ↓
-Users can save important answers as database-backed notes
-```
-
----
-
-## AI Document Intelligence Flow
-
-```text
-User selects an uploaded document
-        ↓
-User clicks Generate Document Overview
-        ↓
-Backend retrieves representative document content
-        ↓
-OpenAI analyzes the document
-        ↓
-The app returns:
-    - Summary
-    - Key takeaways
-    - Important terms
-    - Suggested questions
-    - Related topics
-        ↓
-Frontend displays results in a tabbed interface
-```
-
----
-
-## Quiz Generation Flow
-
-```text
-User selects an uploaded document
-        ↓
-User clicks Generate Study Quiz
-        ↓
-Backend retrieves relevant document content
-        ↓
-OpenAI generates quiz content
-        ↓
-The app returns:
-    - Multiple-choice questions
-    - Short-answer questions
-    - Answers
-    - Explanations
-        ↓
-Frontend displays questions one at a time
-```
+- Supabase Auth
+- Supabase Storage
+- Supabase PostgreSQL
+- Supabase pgvector
+- Render backend deployment
+- Vercel frontend deployment
+- GitHub Actions CI
 
 ---
 
@@ -278,97 +189,91 @@ Frontend displays questions one at a time
 
 ```text
 React/Vite Frontend
-    │
-    ├── Supabase Auth login/signup
-    ├── Upload PDF, DOCX, or TXT files
-    ├── Display user-owned documents
-    ├── Select active document
-    ├── Ask document-specific questions
-    ├── Show chat history
-    ├── Save important answers as notes
-    ├── Generate document intelligence
-    ├── Generate study quizzes
-    └── Display clickable source citations
-            ↓
-FastAPI Backend
-    │
-    ├── Health check endpoint
-    ├── Document upload endpoint
-    ├── Document list endpoint
-    ├── Individual document delete endpoint
-    ├── Clear all documents endpoint
-    ├── Question-answering endpoint
-    ├── Document intelligence endpoint
-    └── Quiz generation endpoint
-            ↓
-Document Processing
-    │
-    ├── PDF text extraction
-    ├── DOCX text extraction
-    ├── TXT text extraction
-    ├── Repeated header/ad/footer filtering
-    ├── Text chunking
-    └── Metadata assignment
-            ↓
-Supabase
-    │
-    ├── Auth for user accounts
-    ├── PostgreSQL for saved notes and document metadata
-    ├── Storage for uploaded files
-    ├── pgvector for persistent embeddings
-    └── Row Level Security for user-owned data
-            ↓
-Vector Search
-    │
-    ├── OpenAI embeddings
-    ├── pgvector semantic similarity search
-    ├── User ID filtering
-    ├── Document ID filtering
-    └── Source-cited retrieval
-            ↓
-LLM Response
-    │
-    ├── Retrieved context
-    ├── OpenAI chat model
-    ├── Source-cited answers
-    ├── Document summaries
-    └── Study quiz generation
-            ↓
-Testing and CI/CD
-    │
-    ├── pytest backend tests
-    ├── API validation tests
-    ├── Health check tests
-    └── GitHub Actions CI workflow
+        ↓
+Supabase Auth Session
+        ↓
+Bearer Token Sent to FastAPI
+        ↓
+FastAPI Backend Verifies Token
+        ↓
+Verified Supabase User ID
+        ↓
+User-Scoped Document Workflows
+        ↓
+Supabase Storage + PostgreSQL + pgvector
+        ↓
+OpenAI Embeddings + Chat Responses
+        ↓
+Source-Cited Answers, Study Tools, Notes, and PDF Preview
 ```
 
 ---
 
-## Production-Ready Features
-
-DocuMind AI includes several production-style engineering features:
+## How It Works
 
 ```text
-Authentication
-User-owned data
-Persistent database storage
-Persistent file storage
-Persistent vector search
-Row Level Security
-Backend validation
-API testing
-GitHub Actions CI
-Cloud deployment
-Environment-based configuration
+User signs in with Supabase Auth
+        ↓
+User uploads PDF, DOCX, or TXT document
+        ↓
+Frontend sends Supabase access token to FastAPI
+        ↓
+Backend verifies token and extracts verified user ID
+        ↓
+Backend saves uploaded file temporarily
+        ↓
+Original file is uploaded to Supabase Storage
+        ↓
+Document text is extracted
+        ↓
+Repeated junk text is filtered
+        ↓
+Text is split into chunks
+        ↓
+Chunks are sanitized for PostgreSQL compatibility
+        ↓
+OpenAI creates embeddings for each chunk
+        ↓
+Chunks and embeddings are stored in Supabase pgvector
+        ↓
+Frontend saves document metadata to Supabase documents table
+        ↓
+User selects a document and asks a question
+        ↓
+Backend retrieves matching chunks by user_id + document_id
+        ↓
+OpenAI generates an answer from retrieved context
+        ↓
+Answer, sources, and chat history are displayed in the app
 ```
-
-These features move the project beyond a simple local RAG demo and closer to a real multi-user SaaS application.
 
 ---
 
-## Supabase Database Tables
+## Security and User Data Isolation
 
-### `documents`
+DocuMind AI uses Supabase access tokens to secure backend routes.
+
+The frontend sends the logged-in user’s Supabase session token with protected API requests. The FastAPI backend verifies that token before processing uploads, questions, document intelligence, quiz generation, delete requests, and clear requests.
+
+The backend does not trust user IDs sent from the frontend. Instead, it extracts the verified user ID from Supabase Auth and uses that ID to scope:
+
+- Document uploads
+- Supabase Storage paths
+- pgvector chunk storage
+- Semantic retrieval
+- Chat responses
+- Document intelligence
+- Quiz generation
+- Delete document workflow
+- Clear all documents workflow
+
+This prevents users from accessing, retrieving, or deleting another user’s document data.
+
+---
+
+## Database Tables
+
+### documents
 
 Stores user-owned document metadata.
 
@@ -384,23 +289,9 @@ storage_url
 created_at
 ```
 
-### `saved_notes`
+### document_chunks
 
-Stores user-owned saved AI responses.
-
-```text
-id
-user_id
-document_id
-document_name
-question
-answer
-created_at
-```
-
-### `document_chunks`
-
-Stores persistent document chunks and embeddings for semantic search.
+Stores document chunks and vector embeddings.
 
 ```text
 id
@@ -417,27 +308,234 @@ embedding
 created_at
 ```
 
+### chat_history
+
+Stores persistent chat history per user and document.
+
+```text
+id
+user_id
+document_id
+document_name
+question
+answer
+sources
+created_at
+```
+
+### saved_notes
+
+Stores saved AI answers as notes.
+
+```text
+id
+user_id
+document_id
+document_name
+question
+answer
+created_at
+```
+
 ---
 
-## Row Level Security
+## API Endpoints
 
-Supabase Row Level Security is enabled for user-owned tables.
+Protected routes require a Supabase Bearer token:
 
-Users can only access records where:
-
-```text
-auth.uid() = user_id
+```http
+Authorization: Bearer <supabase_access_token>
 ```
 
-This applies to:
+### Health Check
 
-```text
-documents
-saved_notes
-document_chunks
+```http
+GET /health
 ```
 
-This ensures each user can only view, insert, and delete their own data.
+Returns backend health status.
+
+### Upload Document
+
+```http
+POST /documents/upload
+```
+
+Uploads, processes, embeds, and stores a document.
+
+Supported file types:
+
+```text
+.pdf
+.docx
+.txt
+```
+
+Example response:
+
+```json
+{
+  "message": "Document uploaded, indexed, and stored successfully",
+  "document_id": "example-document-id",
+  "filename": "example.pdf",
+  "stored_filename": "example-document-id_example.pdf",
+  "pages_loaded": 5,
+  "chunks_created": 24,
+  "pgvector_chunks_created": 24,
+  "storage_path": "user-id/example-document-id_example.pdf",
+  "storage_url": "https://example.supabase.co/storage/v1/object/public/documents/user-id/example-document-id_example.pdf"
+}
+```
+
+### Ask a Question
+
+```http
+POST /chat/ask
+```
+
+Example request:
+
+```json
+{
+  "question": "What is this document about?",
+  "document_id": "example-document-id"
+}
+```
+
+Example response:
+
+```json
+{
+  "answer": "The document explains...",
+  "sources": [
+    {
+      "source": "example.pdf",
+      "page": 1,
+      "preview": "This section discusses...",
+      "url": "https://example.supabase.co/storage/v1/object/public/documents/user-id/example.pdf"
+    }
+  ]
+}
+```
+
+### Generate Document Intelligence
+
+```http
+POST /documents/{document_id}/intelligence
+```
+
+Generates a structured overview of the selected document.
+
+Example response:
+
+```json
+{
+  "document_id": "example-document-id",
+  "intelligence": {
+    "summary": "This document explains...",
+    "key_takeaways": [
+      "Key idea one",
+      "Key idea two"
+    ],
+    "important_terms": [
+      {
+        "term": "Example Term",
+        "definition": "A short definition based on the document."
+      }
+    ],
+    "suggested_questions": [
+      "What is the main argument of this document?"
+    ],
+    "related_topics": [
+      "Related topic one",
+      "Related topic two"
+    ]
+  }
+}
+```
+
+### Generate Study Quiz
+
+```http
+POST /documents/{document_id}/quiz
+```
+
+Generates multiple-choice and short-answer questions from the selected document.
+
+Example response:
+
+```json
+{
+  "document_id": "example-document-id",
+  "quiz": {
+    "multiple_choice": [
+      {
+        "question": "What is the main idea of the document?",
+        "options": [
+          "A. Option one",
+          "B. Option two",
+          "C. Option three",
+          "D. Option four"
+        ],
+        "answer": "A. Option one",
+        "explanation": "This answer is supported by the document because..."
+      }
+    ],
+    "short_answer": [
+      {
+        "question": "Explain the main idea in your own words.",
+        "answer": "The document mainly explains...",
+        "explanation": "This is supported by the document because..."
+      }
+    ]
+  }
+}
+```
+
+### Delete a Document
+
+```http
+DELETE /documents/{document_id}
+```
+
+Deletes a specific document for the verified user.
+
+This removes:
+
+- Original file from Supabase Storage
+- Document chunks from pgvector
+- Document metadata from Supabase PostgreSQL
+
+Example response:
+
+```json
+{
+  "message": "Document deleted successfully",
+  "document_id": "example-document-id"
+}
+```
+
+### Clear All Documents
+
+```http
+DELETE /documents/clear/all
+```
+
+Clears all documents for the verified user.
+
+This removes:
+
+- All user files from Supabase Storage
+- All user document chunks from pgvector
+- All user document metadata from Supabase PostgreSQL
+
+Example response:
+
+```json
+{
+  "message": "Your documents were cleared successfully"
+}
+```
 
 ---
 
@@ -451,25 +549,28 @@ RagDocumentAssistantProject/
 │   │   ├── main.py
 │   │   ├── config.py
 │   │   ├── routes/
-│   │   │   ├── upload_routes.py
 │   │   │   ├── chat_routes.py
+│   │   │   ├── health_routes.py
 │   │   │   ├── intelligence_routes.py
-│   │   │   └── quiz_routes.py
+│   │   │   ├── quiz_routes.py
+│   │   │   └── upload_routes.py
 │   │   └── services/
-│   │       ├── pdf_service.py
-│   │       ├── vector_service.py
-│   │       ├── rag_service.py
-│   │       ├── pgvector_service.py
-│   │       ├── storage_service.py
+│   │       ├── auth_service.py
+│   │       ├── chat_history_service.py
 │   │       ├── intelligence_service.py
+│   │       ├── notes_service.py
+│   │       ├── pdf_service.py
+│   │       ├── pgvector_service.py
 │   │       ├── quiz_service.py
-│   │       └── document_registry.py
+│   │       ├── rag_service.py
+│   │       ├── storage_service.py
+│   │       └── vector_service.py
 │   │
 │   ├── tests/
 │   │   ├── conftest.py
-│   │   ├── test_health.py
 │   │   ├── test_chat_routes.py
-│   │   └── test_document_routes.py
+│   │   ├── test_document_routes.py
+│   │   └── test_health.py
 │   │
 │   ├── requirements.txt
 │   └── .env
@@ -479,14 +580,16 @@ RagDocumentAssistantProject/
 │   ├── src/
 │   │   ├── App.jsx
 │   │   ├── api.js
-│   │   ├── supabaseClient.js
-│   │   ├── notesService.js
+│   │   ├── chatHistoryService.js
 │   │   ├── documentService.js
-│   │   └── styles.css
+│   │   ├── notesService.js
+│   │   ├── styles.css
+│   │   └── supabaseClient.js
 │   │
 │   ├── package.json
 │   └── vite.config.js
 │
+├── screenshots/
 ├── .github/
 │   └── workflows/
 │       └── backend-tests.yml
@@ -495,7 +598,18 @@ RagDocumentAssistantProject/
 └── README.md
 ```
 
-> Note: `.env`, `venv/`, `node_modules/`, local uploads, local ChromaDB files, cache files, and generated local registry files are intentionally excluded from GitHub.
+> Note: `.env`, `venv/`, `node_modules/`, local uploads, local ChromaDB files, and other generated local artifacts should not be pushed to GitHub.
+
+---
+
+## Local Development Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/rag-document-assistant.git
+cd rag-document-assistant
+```
 
 ---
 
@@ -532,39 +646,33 @@ OPENAI_API_KEY=your_openai_api_key_here
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 SUPABASE_STORAGE_BUCKET=documents
-CHROMA_DB_PATH=./chroma_db
 UPLOAD_DIR=./uploads
+CHROMA_DB_PATH=./chroma_db
 ```
 
-Run the backend server:
+Run the backend:
 
 ```bash
 python -m uvicorn app.main:app --reload
 ```
 
-The backend will run at:
+Backend will run locally at:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-FastAPI documentation is available at:
+FastAPI docs will be available at:
 
 ```text
 http://127.0.0.1:8000/docs
-```
-
-Health check endpoint:
-
-```text
-http://127.0.0.1:8000/health
 ```
 
 ---
 
 ## Frontend Setup
 
-Navigate to the frontend folder:
+Open a new terminal and navigate to the frontend folder:
 
 ```bash
 cd frontend
@@ -576,7 +684,7 @@ Install dependencies:
 npm install
 ```
 
-Create a `.env` file inside the `frontend` folder:
+Create a `.env.local` file inside the `frontend` folder:
 
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8000
@@ -584,13 +692,13 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_public_key
 ```
 
-Run the frontend development server:
+Run the frontend:
 
 ```bash
 npm run dev
 ```
 
-The frontend will run at:
+Frontend will run locally at:
 
 ```text
 http://localhost:5173
@@ -600,75 +708,97 @@ http://localhost:5173
 
 ## Supabase Setup
 
+This project uses Supabase for authentication, storage, metadata, chat history, saved notes, and vector search.
+
 ### Required Supabase Services
 
-```text
-Supabase Auth
-Supabase PostgreSQL
-Supabase Storage
-pgvector extension
-Row Level Security
-```
+- Supabase Auth
+- Supabase Storage
+- Supabase PostgreSQL
+- pgvector extension
+- Row Level Security policies
 
-### Storage Bucket
-
-Create a Supabase Storage bucket named:
+### Required Storage Bucket
 
 ```text
 documents
 ```
 
-### pgvector Extension
+For a portfolio demo, the bucket may be public so uploaded files can be previewed in the browser. For a stricter production version, private storage with signed URLs would be recommended.
 
-Enable pgvector:
+### Required Tables
+
+```text
+documents
+document_chunks
+chat_history
+saved_notes
+```
+
+### Required pgvector Function
+
+The backend expects a Supabase RPC function that can match document chunks by embedding similarity while filtering by user and document.
+
+Example concept:
 
 ```sql
-create extension if not exists vector with schema extensions;
+match_document_chunks(
+  query_embedding vector(1536),
+  match_count int,
+  filter_user_id uuid,
+  filter_document_id text
+)
 ```
 
-### Semantic Search Function
+---
 
-The backend uses a Supabase RPC function to match document chunks by vector similarity:
+## Running Tests
+
+From the backend folder:
+
+```bash
+cd backend
+source venv/bin/activate
+python -m pytest
+```
+
+Expected result:
 
 ```text
-match_document_chunks
+6 passed
 ```
 
-This function retrieves relevant chunks by:
+---
 
-```text
-query_embedding
-match_user_id
-match_document_id
-match_count
+## GitHub Actions
+
+The project includes a GitHub Actions workflow for backend tests.
+
+The workflow runs:
+
+```bash
+python -m pytest
 ```
+
+This helps verify protected backend routes, document route behavior, and health checks before deployment.
 
 ---
 
 ## Deployment
 
-### Frontend
+### Backend Deployment — Render
 
-The frontend is deployed on Vercel.
-
-Required Vercel environment variables:
-
-```env
-VITE_API_BASE_URL=https://your-render-backend-url.onrender.com
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_public_key
-```
-
-### Backend
-
-The backend is deployed on Render.
-
-Render settings:
+Recommended Render settings:
 
 ```text
-Root Directory: backend
-Build Command: pip install -r requirements.txt
-Start Command: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+Root Directory:
+backend
+
+Build Command:
+pip install -r requirements.txt
+
+Start Command:
+python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
 Required Render environment variables:
@@ -678,401 +808,126 @@ OPENAI_API_KEY=your_openai_api_key_here
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 SUPABASE_STORAGE_BUCKET=documents
-CHROMA_DB_PATH=./chroma_db
 UPLOAD_DIR=./uploads
+CHROMA_DB_PATH=./chroma_db
+```
+
+Important: The Supabase service role key should only be stored in the backend environment.
+
+### Frontend Deployment — Vercel
+
+Required Vercel environment variables:
+
+```env
+VITE_API_BASE_URL=https://documind-ai-backend-wr40.onrender.com
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_public_key
+```
+
+Important: Do not store the Supabase service role key in Vercel or any frontend environment.
+
+---
+
+## Production Test Checklist
+
+After deploying, test the live app in this order:
+
+```text
+1. Sign in
+2. Upload a small PDF
+3. Confirm it appears in Uploaded Documents
+4. Ask a question
+5. Confirm the answer includes source citations
+6. Click a source citation and confirm the PDF preview scrolls
+7. Generate Document Overview
+8. Generate Study Quiz
+9. Save a note
+10. Confirm the note appears in the Notes tab
+11. Delete one document
+12. Upload two documents
+13. Clear all documents
+14. Log out and log back in
+15. Confirm the user's data remains scoped correctly
 ```
 
 ---
 
-## API Endpoints
-
-### Health Check
-
-```http
-GET /health
-```
-
-Returns backend status.
-
-Example response:
-
-```json
-{
-  "status": "ok"
-}
-```
-
-### Upload Document
-
-```http
-POST /documents/upload
-```
-
-Uploads a PDF, DOCX, or TXT document, stores the file in Supabase Storage, extracts text, removes repeated junk content, creates chunks, generates embeddings, and stores them in Supabase pgvector.
-
-Example response:
-
-```json
-{
-  "message": "Document uploaded, indexed, and stored successfully",
-  "document_id": "example-document-id",
-  "filename": "example.pdf",
-  "stored_filename": "example-document-id_example.pdf",
-  "pages_loaded": 3,
-  "chunks_created": 8,
-  "pgvector_chunks_created": 8,
-  "storage_path": "user-id/example-document-id_example.pdf",
-  "storage_url": "https://your-project.supabase.co/storage/v1/object/public/documents/user-id/example-document-id_example.pdf"
-}
-```
-
-### List Uploaded Documents
-
-```http
-GET /documents/
-```
-
-Returns uploaded documents from the backend registry.
-
-Example response:
-
-```json
-{
-  "documents": [
-    {
-      "document_id": "example-document-id",
-      "filename": "example.pdf",
-      "pages_loaded": 3,
-      "chunks_created": 8,
-      "pgvector_chunks_created": 8,
-      "storage_path": "user-id/example-document-id_example.pdf",
-      "storage_url": "https://your-project.supabase.co/storage/v1/object/public/documents/user-id/example-document-id_example.pdf"
-    }
-  ]
-}
-```
-
-### Ask a Question
-
-```http
-POST /chat/ask
-```
-
-Accepts a user question, document ID, and user ID. Retrieves relevant chunks from Supabase pgvector and returns an AI-generated answer with source citations.
-
-Example request:
-
-```json
-{
-  "question": "What is this document about?",
-  "document_id": "example-document-id",
-  "user_id": "example-user-id"
-}
-```
-
-Example response:
-
-```json
-{
-  "answer": "The document explains...",
-  "sources": [
-    {
-      "source": "example.pdf",
-      "page": 1,
-      "preview": "This section discusses...",
-      "url": "https://your-project.supabase.co/storage/v1/object/public/documents/user-id/example-document-id_example.pdf#page=1",
-      "similarity": 0.82
-    }
-  ]
-}
-```
-
-### Generate Document Intelligence
-
-```http
-POST /documents/{document_id}/intelligence
-```
-
-Generates a structured overview of the selected document, including summary, key takeaways, important terms, suggested questions, and related topics.
-
-Example response:
-
-```json
-{
-  "document_id": "example-document-id",
-  "filename": "example.pdf",
-  "intelligence": {
-    "summary": "This document explains...",
-    "key_takeaways": [
-      "Key idea one",
-      "Key idea two"
-    ],
-    "important_terms": [
-      {
-        "term": "Example Term",
-        "definition": "A short definition of the term."
-      }
-    ],
-    "suggested_questions": [
-      "What is the main argument of this document?"
-    ],
-    "related_topics": [
-      "Related topic one",
-      "Related topic two"
-    ]
-  }
-}
-```
-
-### Generate Study Quiz
-
-```http
-POST /documents/{document_id}/quiz
-```
-
-Generates multiple-choice and short-answer questions from the selected document.
-
-Example response:
-
-```json
-{
-  "document_id": "example-document-id",
-  "filename": "example.pdf",
-  "quiz": {
-    "multiple_choice": [
-      {
-        "question": "What is the main idea of the document?",
-        "options": [
-          "A. Option one",
-          "B. Option two",
-          "C. Option three",
-          "D. Option four"
-        ],
-        "answer": "A. Option one",
-        "explanation": "This answer is supported by the document because..."
-      }
-    ],
-    "short_answer": [
-      {
-        "question": "Explain the main idea in your own words.",
-        "answer": "The document mainly explains...",
-        "explanation": "This is supported by the document because..."
-      }
-    ]
-  }
-}
-```
-
-### Delete a Document
-
-```http
-DELETE /documents/{document_id}
-```
-
-Deletes a specific document, removes its vector chunks, removes the file from Supabase Storage, and removes its metadata from the user’s document list.
-
-Example response:
-
-```json
-{
-  "message": "Document deleted successfully",
-  "document_id": "example-document-id"
-}
-```
-
-### Clear All Documents
-
-```http
-DELETE /documents/clear/all
-```
-
-Clears uploaded documents, removes associated vector chunks, and clears document metadata.
-
-Example response:
-
-```json
-{
-  "message": "All documents cleared successfully"
-}
-```
-
----
-
-## Testing
-
-The backend includes pytest tests for core API behavior.
-
-Run tests from the backend folder:
-
-```bash
-cd backend
-source venv/bin/activate
-python -m pytest
-```
-
-Current test coverage includes:
+## Screenshots
 
 ```text
-Health check endpoint
-Chat request validation
-Document listing endpoint
-Unsupported upload validation
-```
-
----
-
-## GitHub Actions CI
-
-This project includes a GitHub Actions workflow that automatically runs backend tests on push and pull requests.
-
-Workflow file:
-
-```text
-.github/workflows/backend-tests.yml
-```
-
-The workflow:
-
-```text
-Checks out the repository
-Sets up Python
-Installs backend dependencies
-Runs pytest
-```
-
-Required GitHub repository secrets:
-
-```text
-OPENAI_API_KEY
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
+screenshots/login.png
+screenshots/workspace.png
+screenshots/uploaded-documents.png
+screenshots/cited-pdf-preview.png
+screenshots/chat-sources.png
+screenshots/document-intelligence.png
+screenshots/study-quiz.png
+screenshots/saved-notes.png
+screenshots/github-actions.png
+screenshots/render-deploy.png
+screenshots/vercel-deploy.png
 ```
 
 ---
 
 ## Current Behavior
 
-DocuMind AI supports authenticated users with their own document libraries, saved notes, uploaded files, and vector-searchable document chunks. Each uploaded document receives a unique document ID, and each embedded chunk is stored with metadata tied to the authenticated user and selected document.
+DocuMind AI supports authenticated, user-owned document workflows.
 
-When a user asks a question, the backend searches Supabase pgvector using both the user ID and document ID. This keeps answers grounded in the selected document and prevents data from mixing across users.
+Each uploaded document receives a unique document ID. Document metadata is stored in Supabase PostgreSQL, the original file is stored in Supabase Storage, and searchable text chunks are stored with embeddings in PostgreSQL pgvector.
 
-The frontend displays uploaded documents, the current selected document, chat history, AI document intelligence, generated quizzes, saved notes, and clickable source citations. PDF citations open the Supabase-hosted file directly to the cited page when supported by the browser.
+When a user asks a question, generates an overview, or creates a quiz, the backend retrieves chunks using both the verified user ID and selected document ID. This keeps answers grounded in the correct user-owned document.
 
-Saved notes are stored in Supabase PostgreSQL and remain available after refresh, logout, and login.
+The frontend displays uploaded documents, the current selected document, chat history, AI document intelligence, generated quizzes, saved notes, and clickable PDF citations.
 
 ---
 
 ## Known Limitations
 
-* The app uses public Supabase Storage URLs for easier portfolio demo access.
-* Browser PDF viewers can jump to a cited page, but they cannot reliably highlight the exact cited sentence inside the PDF.
-* DOCX files may download instead of previewing directly in the browser, depending on browser behavior.
-* Chat history is currently session-based and not stored permanently.
-* AI-generated quizzes and document intelligence are generated on demand and not yet cached.
-* This project is designed as a portfolio/demo application and is not yet configured for enterprise compliance requirements.
-
----
-
-## Environment Variables
-
-### Backend
-
-```env
-OPENAI_API_KEY=your_openai_api_key_here
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-SUPABASE_STORAGE_BUCKET=documents
-CHROMA_DB_PATH=./chroma_db
-UPLOAD_DIR=./uploads
-```
-
-### Frontend
-
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_public_key
-```
-
-For deployment, use your Render backend URL:
-
-```env
-VITE_API_BASE_URL=https://your-render-backend-url.onrender.com
-```
-
----
-
-## Security Notes
-
-The following files and folders should not be pushed to GitHub:
-
-```text
-backend/.env
-frontend/.env
-.env
-backend/venv/
-venv/
-frontend/node_modules/
-backend/uploads/
-backend/chroma_db/
-backend/documents.json
-backend/.pytest_cache/
-backend/__pycache__/
-```
-
-The frontend uses the Supabase anon public key. The Supabase service role key is only used on the backend and should never be exposed in browser code.
-
-Supabase Row Level Security is enabled so authenticated users can only access their own database records.
-
----
-
-## Problems Solved
-
-DocuMind AI solves the problem of manually searching through long documents by allowing users to ask natural language questions and receive document-grounded answers. Instead of relying on keyword search or general chatbot knowledge, the app uses semantic retrieval to find relevant document sections and generate answers from uploaded content.
-
-The project improves transparency by returning clickable source citations, helping users verify where answers came from.
-
-It also supports learning and retention. Users can generate document summaries, key takeaways, glossary terms, suggested questions, related topics, and study quizzes. This turns uploaded documents into interactive study material rather than static files.
-
-DocuMind AI also addresses several production challenges common in AI applications:
-
-```text
-User authentication
-User-specific data isolation
-Persistent file storage
-Persistent vector storage
-Database-backed notes
-Row Level Security
-Cloud deployment
-Automated backend testing
-CI/CD validation
-```
-
-In addition, the project addresses a common real-world RAG challenge: noisy document extraction. Web-exported PDFs often contain repeated ads, headers, footers, and navigation text. DocuMind AI includes preprocessing logic to reduce repeated junk content before generating embeddings, improving retrieval quality and citation relevance.
+- Large PDFs may take longer to upload because text extraction, chunking, embedding generation, and pgvector insertion happen during the upload request.
+- DOCX files may not preview directly in the browser, depending on browser behavior.
+- Exact sentence-level PDF highlighting is difficult because PDF text layers often split text unpredictably.
+- The current portfolio version uses direct upload processing instead of background jobs.
+- A future production version should use background workers for indexing large documents.
+- A future production version should use private Supabase Storage with signed URLs.
 
 ---
 
 ## Future Improvements
 
-* Store chat history in Supabase PostgreSQL
-* Cache generated quizzes and document intelligence results
-* Add private Supabase Storage with signed URLs
-* Add file size limits and upload progress indicators
-* Add streaming AI responses
-* Add downloadable chat history
-* Add downloadable saved notes
-* Add custom PDF viewer with exact text highlighting
-* Add user dashboard analytics
-* Add frontend tests
-* Add more advanced backend tests with mocked OpenAI and Supabase services
-* Add rate limiting
-* Add admin monitoring/logging
+- Add background indexing jobs for faster upload response time
+- Add upload progress indicators
+- Add file size and page count limits
+- Add streaming AI responses
+- Add downloadable chat history
+- Add downloadable saved notes
+- Add private Supabase Storage with signed URLs
+- Add admin dashboard for usage analytics
+- Add team/shared document workspaces
+- Add semantic search across multiple selected documents
+- Add more advanced citation highlighting
+- Add rate limiting for API protection
+- Add expanded test coverage for upload, quiz, intelligence, and delete workflows
+
+---
+
+## Problems Solved
+
+DocuMind AI solves the problem of manually searching through long documents by allowing users to ask natural language questions and receive document-grounded answers.
+
+Instead of relying on keyword search or general chatbot knowledge, the app uses semantic retrieval to find relevant document sections and generate answers from uploaded content.
+
+The project improves transparency by returning source citations with document names, page numbers, and preview snippets. This helps users verify where answers came from.
+
+It also supports learning and retention by generating summaries, key takeaways, glossary terms, suggested questions, related topics, and study quizzes.
+
+The project also addresses a common real-world RAG challenge: noisy document extraction. Exported PDFs can contain repeated ads, headers, footers, and navigation text. DocuMind AI includes preprocessing logic to reduce repeated junk content before generating embeddings, improving retrieval quality and citation relevance.
 
 ---
 
 ## Resume Summary
 
-Built and deployed a production-style multi-user Retrieval-Augmented Generation document assistant using React, FastAPI, OpenAI, LangChain, Supabase Auth, PostgreSQL, Storage, pgvector, and Row Level Security. The application supports authenticated user accounts, user-owned document libraries, persistent file storage, persistent semantic vector search, source-cited AI answers, AI-generated document summaries, study quizzes, database-backed saved notes, backend API tests, and GitHub Actions CI.
+Built and deployed a secure full-stack RAG document intelligence platform using React, FastAPI, Supabase Auth, Supabase Storage, PostgreSQL pgvector, LangChain, and OpenAI. The application supports authenticated user-owned document libraries, PDF/DOCX/TXT uploads, semantic retrieval, source-cited answers, PDF citation navigation, persistent chat history, saved notes, AI-generated summaries, key takeaways, glossary terms, suggested questions, and study quizzes. Implemented backend token verification, user-scoped retrieval, secure delete/clear workflows, Pytest coverage, GitHub Actions CI, Render backend deployment, and Vercel frontend deployment.
 
 ---
 
